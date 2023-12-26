@@ -1,6 +1,6 @@
-# Smart Copytrade
+# OnChain-CopyTrading
 
-This repository contains the smart contracts for the smart copytrade of Copin
+This repository contains the smart contracts for the decentralized copytrading protocol by Copin
 
 Try running some of the following tasks:
 
