@@ -1,0 +1,20 @@
+require("dotenv").config();
+
+export const PROTOCOL_FEE = 4000;
+export const SMART_COPYTRADE_ADDRESS = process.env.SMART_COPYTRADE_ADDRESS!;
+export const FACTORY_ADDRESS = process.env.FACTORY_ADDRESS!;
+export const TASK_CREATOR_ADDRESS = process.env.TASK_CREATOR_ADDRESS!;
+export const EVENTS_ADDRESS = process.env.EVENTS_ADDRESS!;
+export const CONFIGS_ADDRESS = process.env.CONFIGS_ADDRESS!;
+export const IMPLEMENTATION_ADDRESS = process.env.IMPLEMENTATION_ADDRESS!;
+
+export enum Command {
+  OWNER_MODIFY_COLLATERAL = 0,
+  OWNER_WITHDRAW_ETH = 1,
+  OWNER_WITHDRAW_TOKEN = 2,
+  PERP_MODIFY_COLLATERAL = 3,
+  PERP_PLACE_ORDER = 4,
+  PERP_CLOSE_ORDER = 5,
+  GELATO_CREATE_TASK = 6,
+  GELETO_CANCEL_TASK = 7,
+}

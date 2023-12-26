@@ -1,0 +1,28 @@
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.18;
+
+import {CallUtils} from "../utils/gelato/CallUtils.sol";
+
+contract MockTrustedForwarder {
+    using CallUtils for address;
+
+    function _encodeERC2771Context(
+        bytes calldata _data,
+        address _msgSender
+    ) internal pure returns (bytes memory) {
+        return abi.encodePacked(_data, _msgSender);
+    }
+
+    function triggerExecute(
+        address smartCopytrade,
+        address user,
+        bytes calldata data
+    ) external {
+        smartCopytrade.revertingContractCall(
+            _encodeERC2771Context(data, user),
+            "GelatoRelay1BalanceERC2771.sponsoredCallERC2771:"
+        );
+    }
+
+    receive() external payable {}
+}
