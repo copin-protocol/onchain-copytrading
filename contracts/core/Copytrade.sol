@@ -32,6 +32,9 @@ abstract contract Copytrade is
     uint256 public lockedFund;
     uint256 public taskId;
     mapping(uint256 => Task) internal _tasks;
+    mapping(bytes32 => uint128) internal _keyAccounts;
+    mapping(uint128 => bool) internal _accountTradings;
+    uint128[] public accountIds;
 
     constructor(
         CopytradeConstructorParams memory _params
@@ -55,6 +58,44 @@ abstract contract Copytrade is
         return USD_ASSET.balanceOf(address(this)) - lockedFund;
     }
 
+    function allocatedAccount(
+        address _source,
+        uint256 _market,
+        bool _reverted
+    ) public view returns (uint128) {
+        bytes32 key = keccak256(abi.encodePacked(_source, _market));
+        uint128 accountId = _keyAccounts[key];
+        if (accountId != 0) return accountId;
+        for (uint i = 0; i < accountIds.length; i++) {
+            if (!_accountTradings[accountIds[i]]) return accountIds[i];
+        }
+        if (_reverted) revert NoAccountAvailable();
+        return 0;
+    }
+
+    function getOpenPosition(
+        address _source,
+        uint256 _market
+    ) public view returns (int256 size, int256 pnl, int256 funding) {
+        bytes32 key = keccak256(abi.encodePacked(_source, _market));
+        uint128 accountId = _keyAccounts[key];
+        return _perpGetOpenPosition(accountId, _market);
+    }
+
+    function getAccountTrading(
+        uint128 _accountId
+    ) external view returns (bool) {
+        return _accountTradings[_accountId];
+    }
+
+    function getKeyAccount(
+        address _source,
+        uint256 _market
+    ) external view returns (uint128) {
+        bytes32 key = keccak256(abi.encodePacked(_source, _market));
+        return _keyAccounts[key];
+    }
+
     function checker(
         uint256 _taskId
     ) external view returns (bool canExec, bytes memory execPayload) {
@@ -74,17 +115,7 @@ abstract contract Copytrade is
         if (msg.sender != address(FACTORY)) revert Unauthorized();
         _setInitialOwnership(_owner);
         _addInitialDelegate(_executor);
-        _init();
-    }
-
-    function _setInitialOwnership(address _owner) private {
-        owner = _owner;
-        emit OwnershipTransferred(address(0), _owner);
-    }
-
-    function _addInitialDelegate(address _executor) private {
-        delegates[_executor] = true;
-        emit DelegatedCopytradeAdded({caller: msg.sender, delegate: _executor});
+        _perpInit();
     }
 
     function transferOwnership(address _newOwner) public override {
@@ -111,7 +142,7 @@ abstract contract Copytrade is
         }
         address msgSender = _msgSender();
         if (msgSender != owner) {
-            _chargeExecutorFee(msgSender);
+            _chargeExecutorFee(msgSender, numCommands);
         }
     }
 
@@ -129,7 +160,7 @@ abstract contract Copytrade is
 
         ITaskCreator(TASK_CREATOR).cancelTask(task.gelatoTaskId);
 
-        uint256 fee = _chargeExecutorFee(address(TASK_CREATOR));
+        uint256 fee = _chargeExecutorFee(address(TASK_CREATOR), 1);
 
         _perpExecuteTask(task);
 
@@ -139,6 +170,39 @@ abstract contract Copytrade is
             fillPrice: task.triggerPrice,
             fee: fee
         });
+    }
+
+    function _protocolFee(uint256 _size) internal view returns (uint256) {
+        return _size / IConfigs(CONFIGS).protocolFee();
+    }
+
+    function _sufficientFund(int256 _amountOut, bool origin) internal view {
+        /// @dev origin true => amount as fund asset decimals
+        uint256 _fundOut = origin
+            ? _abs(_amountOut)
+            : _toUsdAsset(_abs(_amountOut));
+        if (_fundOut > availableFund()) {
+            revert InsufficientAvailableFund(availableFund(), _fundOut);
+        }
+    }
+
+    function _validTask(uint256 _taskId) internal view returns (bool) {
+        Task memory task = getTask(_taskId);
+
+        if (task.market == 0) {
+            return false;
+        }
+        return _perpValidTask(task);
+    }
+
+    function _setInitialOwnership(address _owner) private {
+        owner = _owner;
+        emit OwnershipTransferred(address(0), _owner);
+    }
+
+    function _addInitialDelegate(address _executor) private {
+        delegates[_executor] = true;
+        emit DelegatedCopytradeAdded({caller: msg.sender, delegate: _executor});
     }
 
     function _dispatch(Command _command, bytes calldata _inputs) internal {
@@ -162,18 +226,21 @@ abstract contract Copytrade is
         } else {
             address msgSender = _msgSender();
             if (!isAuth(msgSender)) revert Unauthorized();
-            if (_command == Command.PERP_MODIFY_COLLATERAL) {
+            if (_command == Command.PERP_CREATE_ACCOUNT) {
+                _perpCreateAccount();
+            } else if (_command == Command.PERP_MODIFY_COLLATERAL) {
                 _perpModifyCollateral(_inputs);
             } else if (_command == Command.PERP_PLACE_ORDER) {
                 _perpPlaceOrder(_inputs);
+            } else if (_command == Command.PERP_CLOSE_ORDER) {
+                _perpCloseOrder(_inputs);
             } else if (_command == Command.GELATO_CREATE_TASK) {
                 TaskCommand taskCommand;
-                bytes32 market;
+                uint256 market;
                 int256 collateralData;
                 int256 sizeDelta;
                 uint256 triggerPrice;
                 uint256 acceptablePrice;
-                bytes32 options;
                 assembly {
                     taskCommand := calldataload(_inputs.offset)
                     market := calldataload(add(_inputs.offset, 0x20))
@@ -181,7 +248,6 @@ abstract contract Copytrade is
                     sizeDelta := calldataload(add(_inputs.offset, 0x60))
                     triggerPrice := calldataload(add(_inputs.offset, 0x80))
                     acceptablePrice := calldataload(add(_inputs.offset, 0xa0))
-                    options := calldataload(add(_inputs.offset, 0xc0))
                 }
                 _createGelatoTask({
                     _command: taskCommand,
@@ -189,8 +255,7 @@ abstract contract Copytrade is
                     _collateralDelta: collateralData,
                     _sizeDelta: sizeDelta,
                     _triggerPrice: triggerPrice,
-                    _acceptablePrice: acceptablePrice,
-                    _options: options
+                    _acceptablePrice: acceptablePrice
                 });
             } else if (_command == Command.GELETO_CANCEL_TASK) {
                 uint256 requestTaskId;
@@ -236,13 +301,17 @@ abstract contract Copytrade is
         }
     }
 
-    function _chargeExecutorFee(address _executor) internal returns (uint256) {
+    function _chargeExecutorFee(
+        address _executor,
+        uint256 multiplier
+    ) internal returns (uint256) {
         uint256 fee;
         if (_executor == address(TASK_CREATOR)) {
             (fee, ) = automate.getFeeDetails();
         } else {
             fee = CONFIGS.executorFee();
         }
+        fee = fee * multiplier;
         uint256 feeUsd = executorUsdFee(fee);
         address feeReceiver = CONFIGS.feeReceiver();
         if (feeUsd <= availableFund()) {
@@ -274,31 +343,29 @@ abstract contract Copytrade is
         });
     }
 
-    function _preOrder(bytes32 _market, uint256 _sizeDeltaUsd) internal {}
+    function _preOrder(uint256 _market, uint256 _sizeDeltaUsd) internal {}
 
-    function _postOrder(bytes32 _market, uint256 _sizeDeltaUsd) internal {
+    function _postOrder(uint256 _market, uint256 _sizeDeltaUsd) internal {
         uint256 feeUsd = _protocolFee(_sizeDeltaUsd);
         _chargeProtocolFee(_sizeDeltaUsd, feeUsd);
     }
 
-    function _perpModifyCollateral(bytes calldata _inputs) internal virtual {}
-
-    function _perpPlaceOrder(bytes calldata _inputs) internal virtual {}
+    function _perpGetOpenPosition(
+        uint128 _accountId,
+        uint256 _market
+    ) internal view virtual returns (int256 size, int256 pnl, int256 funding) {}
 
     function _perpValidTask(
         Task memory _task
     ) internal view virtual returns (bool) {}
 
-    function _perpExecuteTask(Task memory _task) internal virtual {}
-
     function _createGelatoTask(
         TaskCommand _command,
-        bytes32 _market,
+        uint256 _market,
         int256 _collateralDelta,
         int256 _sizeDelta,
         uint256 _triggerPrice,
-        uint256 _acceptablePrice,
-        bytes32 _options
+        uint256 _acceptablePrice
     ) internal {
         if (_sizeDelta == 0) revert ZeroSizeDelta();
         if (_collateralDelta > 0) {
@@ -330,8 +397,7 @@ abstract contract Copytrade is
             collateralDelta: _collateralDelta,
             sizeDelta: _sizeDelta,
             triggerPrice: _triggerPrice,
-            acceptablePrice: _acceptablePrice,
-            options: _options
+            acceptablePrice: _acceptablePrice
         });
 
         EVENTS.emitCreateGelatoTask({
@@ -342,8 +408,7 @@ abstract contract Copytrade is
             collateralDelta: _collateralDelta,
             sizeDelta: _sizeDelta,
             triggerPrice: _triggerPrice,
-            acceptablePrice: _acceptablePrice,
-            options: _options
+            acceptablePrice: _acceptablePrice
         });
 
         ++taskId;
@@ -354,30 +419,17 @@ abstract contract Copytrade is
         ITaskCreator(TASK_CREATOR).cancelTask(task.gelatoTaskId);
     }
 
-    function _init() internal virtual {}
+    function _perpInit() internal virtual {}
 
-    function _protocolFee(uint256 _size) internal view returns (uint256) {
-        return _size / IConfigs(CONFIGS).protocolFee();
-    }
+    function _perpCreateAccount() internal virtual {}
 
-    function _sufficientFund(int256 _amountOut, bool origin) internal view {
-        /// @dev origin true => amount as fund asset decimals
-        uint256 _fundOut = origin
-            ? _abs(_amountOut)
-            : _toUsdAsset(_abs(_amountOut));
-        if (_fundOut > availableFund()) {
-            revert InsufficientAvailableFund(availableFund(), _fundOut);
-        }
-    }
+    function _perpModifyCollateral(bytes calldata _inputs) internal virtual {}
 
-    function _validTask(uint256 _taskId) internal view returns (bool) {
-        Task memory task = getTask(_taskId);
+    function _perpPlaceOrder(bytes calldata _inputs) internal virtual {}
 
-        if (task.market == bytes32(0)) {
-            return false;
-        }
-        return _perpValidTask(task);
-    }
+    function _perpCloseOrder(bytes calldata _inputs) internal virtual {}
+
+    function _perpExecuteTask(Task memory _task) internal virtual {}
 
     // function _orderKey(
     //     address _market,

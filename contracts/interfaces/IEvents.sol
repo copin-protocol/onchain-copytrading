@@ -64,12 +64,11 @@ interface IEvents {
         uint256 taskId,
         bytes32 gelatoTaskId,
         ICopytrade.TaskCommand command,
-        bytes32 market,
+        uint256 market,
         int256 collateralDelta,
         int256 sizeDelta,
         uint256 triggerPrice,
-        uint256 acceptablePrice,
-        bytes32 options
+        uint256 acceptablePrice
     ) external;
 
     event CreateGelatoTask(
@@ -77,12 +76,11 @@ interface IEvents {
         uint256 indexed taskId,
         bytes32 indexed gelatoTaskId,
         ICopytrade.TaskCommand command,
-        bytes32 market,
+        uint256 market,
         int256 collateralDelta,
         int256 sizeDelta,
         uint256 triggerPrice,
-        uint256 acceptablePrice,
-        bytes32 options
+        uint256 acceptablePrice
     );
 
     function emitGelatoTaskRunned(

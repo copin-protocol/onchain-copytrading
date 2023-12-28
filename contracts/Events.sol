@@ -71,12 +71,11 @@ contract Events is IEvents {
         uint256 taskId,
         bytes32 gelatoTaskId,
         ICopytrade.TaskCommand command,
-        bytes32 market,
+        uint256 market,
         int256 collateralDelta,
         int256 sizeDelta,
         uint256 triggerPrice,
-        uint256 acceptablePrice,
-        bytes32 options
+        uint256 acceptablePrice
     ) external override onlyCopytrades {
         emit CreateGelatoTask({
             account: msg.sender,
@@ -87,8 +86,7 @@ contract Events is IEvents {
             collateralDelta: collateralDelta,
             sizeDelta: sizeDelta,
             triggerPrice: triggerPrice,
-            acceptablePrice: acceptablePrice,
-            options: options
+            acceptablePrice: acceptablePrice
         });
     }
 

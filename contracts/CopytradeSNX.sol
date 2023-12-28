@@ -16,7 +16,6 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
     IERC20 internal immutable SUSDC;
     IERC20 internal immutable SUSD;
     uint128 internal immutable ETH_MARKET_ID;
-    uint128 public accountId;
 
     constructor(
         ConstructorParams memory _params
@@ -47,70 +46,127 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
     }
 
     function hasPerpPermission(
+        uint128 accountId,
         bytes32 permission
     ) external view returns (bool) {
         return PERPS_MARKET.hasPermission(accountId, permission, address(this));
     }
 
-    function isPerpAuthorized(bytes32 permission) external view returns (bool) {
+    function isPerpAuthorized(
+        uint128 accountId,
+        bytes32 permission
+    ) external view returns (bool) {
         return PERPS_MARKET.isAuthorized(accountId, permission, address(this));
     }
 
-    function _init() internal override {
-        accountId = PERPS_MARKET.createAccount();
+    function _perpInit() internal override {
+        _perpCreateAccount();
+    }
+
+    function _perpCreateAccount() internal override {
+        uint128 accountId = PERPS_MARKET.createAccount();
         PERPS_MARKET.grantPermission({
             accountId: accountId,
             permission: "ADMIN",
             user: address(this)
         });
+        accountIds.push(accountId);
     }
 
     function _perpModifyCollateral(bytes calldata _inputs) internal override {
+        uint128 accountId;
         int256 amount;
         assembly {
-            amount := calldataload(_inputs.offset)
+            accountId := calldataload(_inputs.offset)
+            amount := calldataload(add(_inputs.offset, 0x20))
         }
         uint256 usdcAmount = _toUsdAsset(_abs(amount));
         if (amount > 0) {
             USD_ASSET.approve(address(SPOT_MARKET), usdcAmount);
             SPOT_MARKET.wrap(1, usdcAmount, uint256(amount)); // USDC -> sUSDC
             SUSDC.approve(address(SPOT_MARKET), uint256(amount));
-            SPOT_MARKET.sell(1, uint256(amount), uint256(amount), msg.sender); // sUSDC -> USDC
+            SPOT_MARKET.sell(
+                1,
+                uint256(amount),
+                uint256(amount),
+                CONFIGS.feeReceiver()
+            ); // sUSDC -> USDC
             SUSD.approve(address(PERPS_MARKET), uint256(amount));
         }
         PERPS_MARKET.modifyCollateral(accountId, 0, amount);
         if (amount < 0) {
             SUSD.approve(address(SPOT_MARKET), _abs(amount));
-            SPOT_MARKET.buy(1, _abs(amount), _abs(amount), msg.sender); // sUSD -> sUSDC
+            SPOT_MARKET.buy(
+                1,
+                _abs(amount),
+                _abs(amount),
+                CONFIGS.feeReceiver()
+            ); // sUSD -> sUSDC
             SUSDC.approve(address(SPOT_MARKET), _abs(amount));
             SPOT_MARKET.unwrap(1, _abs(amount), usdcAmount); // sUSDC -> USDC
         }
     }
 
     function _perpPlaceOrder(bytes calldata _inputs) internal override {
+        address source;
         uint128 marketId;
+        uint128 accountId;
         int128 sizeDelta;
         uint256 acceptablePrice;
         address referrer;
         assembly {
-            marketId := calldataload(_inputs.offset)
-            sizeDelta := calldataload(add(_inputs.offset, 0x20))
-            acceptablePrice := calldataload(add(_inputs.offset, 0x40))
-            referrer := calldataload(add(_inputs.offset, 0x60))
+            source := calldataload(_inputs.offset)
+            marketId := calldataload(add(_inputs.offset, 0x20))
+            accountId := calldataload(add(_inputs.offset, 0x40))
+            sizeDelta := calldataload(add(_inputs.offset, 0x60))
+            acceptablePrice := calldataload(add(_inputs.offset, 0x80))
+            referrer := calldataload(add(_inputs.offset, 0xa0))
         }
-        uint256 sizeDeltaUsd = _tokenToUsd(_abs(sizeDelta), marketId);
-        bytes32 market = bytes32(uint256(marketId));
-        _preOrder(market, sizeDeltaUsd);
-        _commitOrder({
-            _perpsMarketId: marketId,
+        if (accountId == 0)
+            accountId = allocatedAccount(source, uint256(marketId), true);
+        (, , int128 lastSize) = PERPS_MARKET.getOpenPosition(
+            accountId,
+            marketId
+        );
+        _placeOrder({
+            _source: source,
+            _marketId: marketId,
             _accountId: accountId,
             _sizeDelta: sizeDelta,
-            _settlementStrategyId: 0,
+            _lastSize: lastSize,
             _acceptablePrice: acceptablePrice,
             _trackingCode: TRACKING_CODE,
             _referrer: referrer
         });
-        _postOrder(market, sizeDeltaUsd);
+    }
+
+    function _perpCloseOrder(bytes calldata _inputs) internal override {
+        address source;
+        uint128 marketId;
+        uint128 accountId;
+        address referrer;
+        assembly {
+            source := calldataload(_inputs.offset)
+            marketId := calldataload(add(_inputs.offset, 0x20))
+            accountId := calldataload(add(_inputs.offset, 0x40))
+            referrer := calldataload(add(_inputs.offset, 0x60))
+        }
+        if (accountId == 0)
+            accountId = allocatedAccount(source, uint256(marketId), true);
+        (, , int128 lastSize) = PERPS_MARKET.getOpenPosition(
+            accountId,
+            marketId
+        );
+        _placeOrder({
+            _source: source,
+            _marketId: marketId,
+            _accountId: accountId,
+            _sizeDelta: lastSize * -1,
+            _lastSize: lastSize,
+            _acceptablePrice: lastSize > 0 ? 1 : type(uint256).max,
+            _trackingCode: TRACKING_CODE,
+            _referrer: referrer
+        });
     }
 
     function _perpValidTask(
@@ -179,30 +235,61 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
         // });
     }
 
-    function _commitOrder(
-        uint128 _perpsMarketId,
+    function _placeOrder(
+        address _source,
+        uint128 _marketId,
         uint128 _accountId,
         int128 _sizeDelta,
-        uint128 _settlementStrategyId,
+        int128 _lastSize,
         uint256 _acceptablePrice,
         bytes32 _trackingCode,
         address _referrer
     ) internal returns (IPerpsMarket.Data memory retOrder, uint256 fees) {
+        bytes32 key = keccak256(abi.encodePacked(_source, uint256(_marketId)));
+        uint256 keyAccountId = _keyAccounts[key];
+        if (keyAccountId != 0 && keyAccountId != _accountId)
+            revert AccountMismatch();
+
+        uint256 sizeDeltaUsd = _tokenToUsd(_abs(_sizeDelta), _marketId);
+        _preOrder(uint256(_marketId), sizeDeltaUsd);
+
+        // close
+        if (_lastSize + _sizeDelta == 0) {
+            // release account
+            _accountTradings[_accountId] = false;
+            _keyAccounts[key] = 0;
+        } else {
+            _accountTradings[_accountId] = true;
+            if (keyAccountId == 0) _keyAccounts[key] = _accountId;
+        }
+
         (retOrder, fees) = PERPS_MARKET.commitOrder(
             IPerpsMarket.OrderCommitmentRequest({
-                marketId: _perpsMarketId,
+                marketId: _marketId,
                 accountId: _accountId,
                 sizeDelta: _sizeDelta,
-                settlementStrategyId: _settlementStrategyId,
+                settlementStrategyId: 0,
                 acceptablePrice: _acceptablePrice,
                 trackingCode: _trackingCode,
                 referrer: _referrer
             })
         );
+
+        _postOrder(uint256(_marketId), sizeDeltaUsd);
     }
 
-    function _getMarketId(bytes32 _market) internal pure returns (uint128) {
-        return uint128(uint256(_market));
+    function _perpGetOpenPosition(
+        uint128 _accountId,
+        uint256 _market
+    ) internal view override returns (int256 size, int256 pnl, int256 funding) {
+        (pnl, funding, size) = IPerpsMarket(PERPS_MARKET).getOpenPosition(
+            _accountId,
+            uint128(_market)
+        );
+    }
+
+    function _getMarketId(uint256 _market) internal pure returns (uint128) {
+        return uint128(_market);
     }
 
     function _marketIndexPrice(

@@ -6,11 +6,12 @@ interface ICopytrade {
         OWNER_MODIFY_FUND, //0
         OWNER_WITHDRAW_ETH, //1
         OWNER_WITHDRAW_TOKEN, //2
-        PERP_MODIFY_COLLATERAL, //3
-        PERP_PLACE_ORDER, //4
-        PERP_CLOSE_ORDER, //5
-        GELATO_CREATE_TASK, //6
-        GELETO_CANCEL_TASK //7
+        PERP_CREATE_ACCOUNT, //3
+        PERP_MODIFY_COLLATERAL, //4
+        PERP_PLACE_ORDER, //5
+        PERP_CLOSE_ORDER, //6
+        GELATO_CREATE_TASK, //7
+        GELETO_CANCEL_TASK //8
     }
 
     enum TaskCommand {
@@ -44,12 +45,11 @@ interface ICopytrade {
     struct Task {
         bytes32 gelatoTaskId;
         TaskCommand command;
-        bytes32 market;
+        uint256 market;
         int256 collateralDelta;
         int256 sizeDelta;
         uint256 triggerPrice;
         uint256 acceptablePrice;
-        bytes32 options;
     }
 
     error LengthMismatch();
@@ -62,9 +62,15 @@ interface ICopytrade {
 
     error EthWithdrawalFailed();
 
-    error FeeHasBeenReleased();
-
     error NoOrderFound();
+
+    error NoAccountAvailable();
+
+    error AccountMismatch();
+
+    error AccountUnavailable();
+
+    error KeyWrong();
 
     error FeeNotYetReleased();
 
@@ -78,6 +84,21 @@ interface ICopytrade {
 
     function availableFund() external view returns (uint256);
 
+    function allocatedAccount(
+        address _source,
+        uint256 _market,
+        bool _reverted
+    ) external view returns (uint128);
+
+    function getOpenPosition(
+        address _source,
+        uint256 _market
+    ) external view returns (int256 size, int256 pnl, int256 funding);
+
+    function checker(
+        uint256 _taskId
+    ) external view returns (bool canExec, bytes memory execPayload);
+
     function getTask(uint256 _taskId) external view returns (Task memory);
 
     function init(address _owner, address _executor) external;
@@ -86,4 +107,6 @@ interface ICopytrade {
         Command[] calldata _commands,
         bytes[] calldata _inputs
     ) external payable;
+
+    function executeTask(uint256 _taskId) external;
 }
