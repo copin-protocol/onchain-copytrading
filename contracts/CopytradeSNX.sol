@@ -144,12 +144,14 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
         address source;
         uint128 marketId;
         uint128 accountId;
+        uint256 acceptablePrice;
         address referrer;
         assembly {
             source := calldataload(_inputs.offset)
             marketId := calldataload(add(_inputs.offset, 0x20))
             accountId := calldataload(add(_inputs.offset, 0x40))
-            referrer := calldataload(add(_inputs.offset, 0x60))
+            acceptablePrice := calldataload(add(_inputs.offset, 0x60))
+            referrer := calldataload(add(_inputs.offset, 0x80))
         }
         if (accountId == 0)
             accountId = allocatedAccount(source, uint256(marketId), true);
@@ -163,7 +165,7 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
             _accountId: accountId,
             _sizeDelta: lastSize * -1,
             _lastSize: lastSize,
-            _acceptablePrice: lastSize > 0 ? 1 : type(uint256).max,
+            _acceptablePrice: acceptablePrice,
             _trackingCode: TRACKING_CODE,
             _referrer: referrer
         });

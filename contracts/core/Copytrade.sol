@@ -140,9 +140,8 @@ abstract contract Copytrade is
                 ++commandIndex;
             }
         }
-        address msgSender = _msgSender();
-        if (msgSender != owner) {
-            _chargeExecutorFee(msgSender, numCommands);
+        if (msg.sender != owner) {
+            _chargeExecutorFee(msg.sender, numCommands);
         }
     }
 
@@ -224,8 +223,7 @@ abstract contract Copytrade is
                 _withdrawEth({_amount: amount, _msgSender: msg.sender});
             }
         } else {
-            address msgSender = _msgSender();
-            if (!isAuth(msgSender)) revert Unauthorized();
+            if (!isAuth(msg.sender)) revert Unauthorized();
             if (_command == Command.PERP_CREATE_ACCOUNT) {
                 _perpCreateAccount();
             } else if (_command == Command.PERP_MODIFY_COLLATERAL) {

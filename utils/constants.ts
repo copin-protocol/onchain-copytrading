@@ -7,6 +7,8 @@ export const TASK_CREATOR_ADDRESS = process.env.TASK_CREATOR_ADDRESS!;
 export const EVENTS_ADDRESS = process.env.EVENTS_ADDRESS!;
 export const CONFIGS_ADDRESS = process.env.CONFIGS_ADDRESS!;
 export const IMPLEMENTATION_ADDRESS = process.env.IMPLEMENTATION_ADDRESS!;
+export const RELAYER_API_KEY = process.env.RELAYER_API_KEY!;
+export const RELAYER_API_SECRET = process.env.RELAYER_API_SECRET!;
 
 export enum Command {
   OWNER_MODIFY_COLLATERAL = 0,

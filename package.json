@@ -32,7 +32,8 @@
   "dependencies": {
     "@gelatonetwork/relay-context": "3.0.0",
     "@gelatonetwork/relay-sdk": "5.0.0",
-    "@openzeppelin/contracts": "4.8.3",
+    "@openzeppelin/contracts": "4.9.5",
+    "@openzeppelin/defender-sdk": "1.8.0",
     "@uniswap/v3-core": "1.0.0",
     "base64-sol": "1.1.0",
     "hardhat-watcher": "2.3.0"

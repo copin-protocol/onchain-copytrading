@@ -19,16 +19,23 @@ async function main() {
   const copytrade = new ethers.Contract(
     SMART_COPYTRADE_ADDRESS,
     copytradeAbi,
-    wallet2
+    wallet2 as any
   );
 
   const perps = (network.config as CopinNetworkConfig).SNX_PERPS_MARKET;
   const spot = (network.config as CopinNetworkConfig).SNX_SPOT_MARKET;
-  const perpsMarket = new ethers.Contract(perps, perpsMarketAbi, wallet2);
-  const spotMarket = new ethers.Contract(spot, spotMarketAbi, wallet2);
+  const perpsMarket = new ethers.Contract(
+    perps,
+    perpsMarketAbi,
+    wallet2 as any
+  );
+  const spotMarket = new ethers.Contract(spot, spotMarketAbi, wallet2 as any);
+
+  // const accountId = "170141183460469231731687303715884106886";
+  const accountId = "170141183460469231731687303715884106887";
 
   const position = await perpsMarket.getOpenPosition(
-    BigNumber.from("170141183460469231731687303715884106886"),
+    BigNumber.from(accountId),
     100
   );
   console.log(
@@ -37,12 +44,10 @@ async function main() {
       [key]: ethers.utils.formatEther(value),
     }))
   );
-  console.log(
-    await copytrade.getAccountTrading("170141183460469231731687303715884106886")
-  );
+  console.log(await copytrade.getAccountTrading(accountId));
   console.log((await copytrade.getKeyAccount(wallet2.address, 100)).toString());
   // const order = await perpsMarket.getOrder(
-  //   BigNumber.from("170141183460469231731687303715884106884")
+  //   BigNumber.from(accountId)
   // );
   // console.log(
   //   "order",
@@ -51,7 +56,7 @@ async function main() {
   //   }))
   // );
   const availableMargin = await perpsMarket.getAvailableMargin(
-    BigNumber.from("170141183460469231731687303715884106886")
+    BigNumber.from(accountId)
   );
   console.log(ethers.utils.formatEther(availableMargin));
 }

@@ -15,7 +15,7 @@ async function main() {
   const copytrade = new ethers.Contract(
     SMART_COPYTRADE_ADDRESS,
     copytradeAbi,
-    wallet2
+    wallet2 as any
   );
 
   const commands = [Command.PERP_CREATE_ACCOUNT];
