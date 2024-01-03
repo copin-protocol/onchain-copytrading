@@ -31,8 +31,8 @@ async function main() {
   );
   const spotMarket = new ethers.Contract(spot, spotMarketAbi, wallet2 as any);
 
-  // const accountId = "170141183460469231731687303715884106886";
-  const accountId = "170141183460469231731687303715884106887";
+  const accountId = "170141183460469231731687303715884106886";
+  // const accountId = "170141183460469231731687303715884106887";
 
   const position = await perpsMarket.getOpenPosition(
     BigNumber.from(accountId),
@@ -58,6 +58,13 @@ async function main() {
   const availableMargin = await perpsMarket.getAvailableMargin(
     BigNumber.from(accountId)
   );
-  console.log(ethers.utils.formatEther(availableMargin));
+  console.log("availableMargin", ethers.utils.formatEther(availableMargin));
+  const withdrawableMargin = await perpsMarket.getWithdrawableMargin(
+    BigNumber.from(accountId)
+  );
+  console.log(
+    "withdrawableMargin",
+    ethers.utils.formatEther(withdrawableMargin)
+  );
 }
 main();

@@ -22,8 +22,8 @@ async function main() {
 
   const fund = new ethers.Contract(usdAsset, mockERC20, wallet2 as any);
 
-  const approvedTx = await fund.approve(copytrade.address, DEFAULT_MARGIN);
-  console.log("approvedTx", approvedTx);
+  // const approvedTx = await fund.approve(copytrade.address, DEFAULT_MARGIN);
+  // console.log("approvedTx", approvedTx);
 
   console.log(ethers.utils.formatBytes32String("ADMIN"));
 
@@ -37,15 +37,13 @@ async function main() {
 
   const commands = [
     Command.OWNER_MODIFY_COLLATERAL,
-    Command.PERP_MODIFY_COLLATERAL,
+    // Command.PERP_MODIFY_COLLATERAL,
   ];
   const inputs = [
     abiDecoder.encode(["int256"], [DEFAULT_MARGIN]),
-    abiDecoder.encode(["uint256", "int256"], [accountId, DEFAULT_MARGIN]),
+    // abiDecoder.encode(["uint256", "int256"], [accountId, DEFAULT_MARGIN]),
   ];
-  const tx = await copytrade.execute(commands, inputs, {
-    gasLimit: 2_000_000,
-  });
+  const tx = await copytrade.execute(commands, inputs);
   console.log("tx", tx);
 }
 main();

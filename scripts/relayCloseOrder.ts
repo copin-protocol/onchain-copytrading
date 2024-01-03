@@ -49,18 +49,6 @@ async function main() {
   const perpsMarket = new ethers.Contract(perps, perpsMarketAbi, signer as any);
 
   const indexPrice = await perpsMarket.indexPrice(ethMarketId);
-
-  const leverage = 10;
-  const amount = ethers.utils.parseEther("50");
-  const isLong = true;
-  const isIncrease = true;
-  const sign = isLong === isIncrease ? 1 : -1;
-  const sizeDelta = amount
-    .mul(leverage)
-    .mul(BigNumber.from(10).pow(18))
-    .div(indexPrice)
-    .mul(sign);
-
   const commands: Command[] = [];
   const inputs: string[] = [];
 
@@ -71,63 +59,28 @@ async function main() {
     false
   );
 
-  let totalAmount = amount;
-
   if (!accountId) {
-    commands.push(Command.PERP_CREATE_ACCOUNT, Command.PERP_MODIFY_COLLATERAL);
+    throw Error("Position not found");
+  }
+
+  const position = await perpsMarket.getOpenPosition(accountId, ethMarketId);
+  if (position.positionSize.eq(0)) {
+    throw Error("No open position");
+  }
+  const sizeDelta = position.positionSize.mul(-1);
+  const ONE = BigNumber.from(10).pow(18);
+  const withdrawableMargin: BigNumber = (
+    await perpsMarket.getWithdrawableMargin(accountId)
+  ).sub(ONE); // 1 SUSD safety
+
+  if (withdrawableMargin.gt(0)) {
+    commands.push(Command.PERP_MODIFY_COLLATERAL);
     inputs.push(
-      "0",
       abiDecoder.encode(
         ["address", "uint256", "int256"],
-        [demoSource.address, ethMarketId, totalAmount]
+        [demoSource.address, ethMarketId, withdrawableMargin.mul(-1)]
       )
     );
-  } else {
-    // const size = TOTAL_MARGIN.mul(BigNumber.from(10).pow(18)).div(indexPrice);
-
-    const position = await perpsMarket.getOpenPosition(accountId, ethMarketId);
-    if (!position.positionSize.eq(0)) {
-      console.log("aaaa");
-      totalAmount = (position.positionSize as BigNumber)
-        .add(sizeDelta)
-        .div(leverage)
-        .mul(indexPrice)
-        .div(BigNumber.from(10).pow(18))
-        .abs();
-    }
-    const availableMargin: BigNumber = await perpsMarket.getAvailableMargin(
-      accountId
-    );
-    const ONE = BigNumber.from(10).pow(18);
-    const withdrawableMargin: BigNumber = (
-      await perpsMarket.getWithdrawableMargin(accountId)
-    ).sub(ONE); // 1 SUSD safety
-    const diff = availableMargin
-      .sub(totalAmount)
-      .abs()
-      .mul(ONE)
-      .div(totalAmount);
-
-    if (diff.gt(ONE.div(100))) {
-      const diffAmount = totalAmount.sub(availableMargin);
-      console.log("diffAmount", formatEther(diffAmount));
-      commands.push(Command.PERP_MODIFY_COLLATERAL);
-      let modifyAmount: BigNumber;
-      if (diffAmount.gt(0)) {
-        modifyAmount = diffAmount;
-      } else {
-        modifyAmount = withdrawableMargin.gt(diffAmount.abs())
-          ? diffAmount
-          : withdrawableMargin.mul(-1);
-      }
-      console.log("modifyAmount", formatEther(modifyAmount));
-      inputs.push(
-        abiDecoder.encode(
-          ["address", "uint256", "int256"],
-          [demoSource.address, ethMarketId, modifyAmount]
-        )
-      );
-    }
   }
 
   const fillPrice = await perpsMarket.fillPrice(
@@ -140,17 +93,14 @@ async function main() {
   console.log("indexPrice", formatEther(indexPrice));
   console.log("fillPrice", formatEther(fillPrice));
   console.log("sizeDelta", formatEther(sizeDelta));
-  console.log("amount", formatEther(amount));
-  console.log("totalAmount", formatEther(totalAmount));
 
-  commands.push(Command.PERP_PLACE_ORDER);
+  commands.push(Command.PERP_CLOSE_ORDER);
   inputs.push(
     abiDecoder.encode(
-      ["address", "uint256", "int256", "uint256", "address"],
+      ["address", "uint256", "uint256", "address"],
       [
         demoSource.address,
         ethMarketId,
-        sizeDelta,
         calculateAcceptablePrice(fillPrice, sizeDelta),
         demoSource.address,
       ]

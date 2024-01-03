@@ -74,12 +74,15 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
     }
 
     function _perpModifyCollateral(bytes calldata _inputs) internal override {
-        uint128 accountId;
+        address source;
+        uint128 marketId;
         int256 amount;
         assembly {
-            accountId := calldataload(_inputs.offset)
-            amount := calldataload(add(_inputs.offset, 0x20))
+            source := calldataload(_inputs.offset)
+            marketId := calldataload(add(_inputs.offset, 0x20))
+            amount := calldataload(add(_inputs.offset, 0x40))
         }
+        uint128 accountId = allocatedAccount(source, uint256(marketId), true);
         uint256 usdcAmount = _toUsdAsset(_abs(amount));
         if (amount > 0) {
             USD_ASSET.approve(address(SPOT_MARKET), usdcAmount);
@@ -110,30 +113,23 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
     function _perpPlaceOrder(bytes calldata _inputs) internal override {
         address source;
         uint128 marketId;
-        uint128 accountId;
         int128 sizeDelta;
         uint256 acceptablePrice;
         address referrer;
         assembly {
             source := calldataload(_inputs.offset)
             marketId := calldataload(add(_inputs.offset, 0x20))
-            accountId := calldataload(add(_inputs.offset, 0x40))
-            sizeDelta := calldataload(add(_inputs.offset, 0x60))
-            acceptablePrice := calldataload(add(_inputs.offset, 0x80))
-            referrer := calldataload(add(_inputs.offset, 0xa0))
+            sizeDelta := calldataload(add(_inputs.offset, 0x40))
+            acceptablePrice := calldataload(add(_inputs.offset, 0x60))
+            referrer := calldataload(add(_inputs.offset, 0x80))
         }
-        if (accountId == 0)
-            accountId = allocatedAccount(source, uint256(marketId), true);
-        (, , int128 lastSize) = PERPS_MARKET.getOpenPosition(
-            accountId,
-            marketId
-        );
+        if (sizeDelta == 0) revert ZeroSizeDelta();
+        uint128 accountId = allocatedAccount(source, uint256(marketId), true);
         _placeOrder({
             _source: source,
             _marketId: marketId,
             _accountId: accountId,
             _sizeDelta: sizeDelta,
-            _lastSize: lastSize,
             _acceptablePrice: acceptablePrice,
             _trackingCode: TRACKING_CODE,
             _referrer: referrer
@@ -143,28 +139,20 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
     function _perpCloseOrder(bytes calldata _inputs) internal override {
         address source;
         uint128 marketId;
-        uint128 accountId;
         uint256 acceptablePrice;
         address referrer;
         assembly {
             source := calldataload(_inputs.offset)
             marketId := calldataload(add(_inputs.offset, 0x20))
-            accountId := calldataload(add(_inputs.offset, 0x40))
-            acceptablePrice := calldataload(add(_inputs.offset, 0x60))
-            referrer := calldataload(add(_inputs.offset, 0x80))
+            acceptablePrice := calldataload(add(_inputs.offset, 0x40))
+            referrer := calldataload(add(_inputs.offset, 0x60))
         }
-        if (accountId == 0)
-            accountId = allocatedAccount(source, uint256(marketId), true);
-        (, , int128 lastSize) = PERPS_MARKET.getOpenPosition(
-            accountId,
-            marketId
-        );
+        uint128 accountId = allocatedAccount(source, uint256(marketId), true);
         _placeOrder({
             _source: source,
             _marketId: marketId,
             _accountId: accountId,
-            _sizeDelta: lastSize * -1,
-            _lastSize: lastSize,
+            _sizeDelta: 0, // sizeDelta 0 = close position
             _acceptablePrice: acceptablePrice,
             _trackingCode: TRACKING_CODE,
             _referrer: referrer
@@ -242,21 +230,20 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
         uint128 _marketId,
         uint128 _accountId,
         int128 _sizeDelta,
-        int128 _lastSize,
         uint256 _acceptablePrice,
         bytes32 _trackingCode,
         address _referrer
     ) internal returns (IPerpsMarket.Data memory retOrder, uint256 fees) {
         bytes32 key = keccak256(abi.encodePacked(_source, uint256(_marketId)));
         uint256 keyAccountId = _keyAccounts[key];
-        if (keyAccountId != 0 && keyAccountId != _accountId)
-            revert AccountMismatch();
-
-        uint256 sizeDeltaUsd = _tokenToUsd(_abs(_sizeDelta), _marketId);
-        _preOrder(uint256(_marketId), sizeDeltaUsd);
+        (, , int128 lastSize) = PERPS_MARKET.getOpenPosition(
+            _accountId,
+            _marketId
+        );
+        if (_sizeDelta == 0) _sizeDelta = lastSize * -1;
 
         // close
-        if (_lastSize + _sizeDelta == 0) {
+        if (lastSize + _sizeDelta == 0) {
             // release account
             _accountTradings[_accountId] = false;
             _keyAccounts[key] = 0;
@@ -264,6 +251,9 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
             _accountTradings[_accountId] = true;
             if (keyAccountId == 0) _keyAccounts[key] = _accountId;
         }
+
+        uint256 sizeDeltaUsd = _tokenToUsd(_abs(_sizeDelta), _marketId);
+        _preOrder(uint256(_marketId), sizeDeltaUsd);
 
         (retOrder, fees) = PERPS_MARKET.commitOrder(
             IPerpsMarket.OrderCommitmentRequest({
