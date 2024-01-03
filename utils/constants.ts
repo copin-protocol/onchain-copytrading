@@ -11,7 +11,7 @@ export const RELAYER_API_KEY = process.env.RELAYER_API_KEY!;
 export const RELAYER_API_SECRET = process.env.RELAYER_API_SECRET!;
 
 export enum Command {
-  OWNER_MODIFY_COLLATERAL = 0,
+  OWNER_MODIFY_FUND = 0,
   OWNER_WITHDRAW_ETH = 1,
   OWNER_WITHDRAW_TOKEN = 2,
   PERP_CREATE_ACCOUNT = 3,

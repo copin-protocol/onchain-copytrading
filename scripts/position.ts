@@ -14,54 +14,45 @@ export const DEFAULT_MARGIN = ethers.utils.parseEther("100");
 
 const abiDecoder = ethers.utils.defaultAbiCoder;
 
+const ethMarketId = 100;
+
 async function main() {
-  const [, wallet2] = await ethers.getSigners();
+  const [demoSource] = await ethers.getSigners();
   const copytrade = new ethers.Contract(
     SMART_COPYTRADE_ADDRESS,
     copytradeAbi,
-    wallet2 as any
+    demoSource as any
   );
 
   const perps = (network.config as CopinNetworkConfig).SNX_PERPS_MARKET;
-  const spot = (network.config as CopinNetworkConfig).SNX_SPOT_MARKET;
   const perpsMarket = new ethers.Contract(
     perps,
     perpsMarketAbi,
-    wallet2 as any
+    demoSource as any
   );
-  const spotMarket = new ethers.Contract(spot, spotMarketAbi, wallet2 as any);
 
-  const accountId = "170141183460469231731687303715884106886";
+  // const accountId = "170141183460469231731687303715884106886";
   // const accountId = "170141183460469231731687303715884106887";
-
-  const position = await perpsMarket.getOpenPosition(
-    BigNumber.from(accountId),
-    100
+  // console.log("trading", await copytrade.getAccountTrading(accountId));
+  // console.log(
+  //   (await copytrade.getKeyAccount(demoSource.address, ethMarketId)).toString()
+  // );
+  const accountId = await copytrade.allocatedAccount(
+    demoSource.address,
+    ethMarketId,
+    false
   );
+
+  const position = await perpsMarket.getOpenPosition(accountId, ethMarketId);
   console.log(
     "position",
     Object.entries(position).map(([key, value]: any[]) => ({
       [key]: ethers.utils.formatEther(value),
     }))
   );
-  console.log(await copytrade.getAccountTrading(accountId));
-  console.log((await copytrade.getKeyAccount(wallet2.address, 100)).toString());
-  // const order = await perpsMarket.getOrder(
-  //   BigNumber.from(accountId)
-  // );
-  // console.log(
-  //   "order",
-  //   Object.entries(order).map(([key, value]: any[]) => ({
-  //     [key]: value.toString(),
-  //   }))
-  // );
-  const availableMargin = await perpsMarket.getAvailableMargin(
-    BigNumber.from(accountId)
-  );
+  const availableMargin = await perpsMarket.getAvailableMargin(accountId);
   console.log("availableMargin", ethers.utils.formatEther(availableMargin));
-  const withdrawableMargin = await perpsMarket.getWithdrawableMargin(
-    BigNumber.from(accountId)
-  );
+  const withdrawableMargin = await perpsMarket.getWithdrawableMargin(accountId);
   console.log(
     "withdrawableMargin",
     ethers.utils.formatEther(withdrawableMargin)

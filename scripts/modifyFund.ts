@@ -6,7 +6,7 @@ import { Command, SMART_COPYTRADE_ADDRESS } from "../utils/constants";
 import { CopinNetworkConfig } from "../utils/types/config";
 // const { formatUnits } = require("ethers/lib/utils");
 
-export const DEFAULT_MARGIN = ethers.utils.parseEther("100");
+export const FUND = ethers.utils.parseEther("200");
 
 const abiDecoder = ethers.utils.defaultAbiCoder;
 
@@ -22,27 +22,11 @@ async function main() {
 
   const fund = new ethers.Contract(usdAsset, mockERC20, wallet2 as any);
 
-  // const approvedTx = await fund.approve(copytrade.address, DEFAULT_MARGIN);
-  // console.log("approvedTx", approvedTx);
+  const approvedTx = await fund.approve(copytrade.address, FUND);
+  console.log("approvedTx", approvedTx);
 
-  console.log(ethers.utils.formatBytes32String("ADMIN"));
-
-  const accountId = await copytrade.allocatedAccount(
-    wallet1.address,
-    100,
-    false
-  );
-
-  console.log("accountId", accountId.toString());
-
-  const commands = [
-    Command.OWNER_MODIFY_COLLATERAL,
-    // Command.PERP_MODIFY_COLLATERAL,
-  ];
-  const inputs = [
-    abiDecoder.encode(["int256"], [DEFAULT_MARGIN]),
-    // abiDecoder.encode(["uint256", "int256"], [accountId, DEFAULT_MARGIN]),
-  ];
+  const commands = [Command.OWNER_MODIFY_FUND];
+  const inputs = [abiDecoder.encode(["int256"], [FUND])];
   const tx = await copytrade.execute(commands, inputs);
   console.log("tx", tx);
 }
