@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
 
-import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {ICopytrade} from "../interfaces/ICopytrade.sol";
 import {IFactory} from "../interfaces/IFactory.sol";
@@ -16,7 +15,6 @@ import {Module, ModuleData, IAutomate} from "../utils/gelato/Types.sol";
 abstract contract Copytrade is
     ICopytrade,
     Auth,
-    ERC2771Context,
     AutomateReady,
     ReentrancyGuard
 {
@@ -29,20 +27,17 @@ abstract contract Copytrade is
     IERC20 internal immutable USD_ASSET; // USD token
     ITaskCreator internal immutable TASK_CREATOR;
 
+    address public executor;
     uint256 public lockedFund;
     uint256 public taskId;
     mapping(uint256 => Task) internal _tasks;
     mapping(bytes32 => uint128) internal _keyAccounts;
-    mapping(uint128 => bool) internal _accountTradings;
+    mapping(uint128 => uint256) internal _accountMarkets;
     uint128[] public accountIds;
 
     constructor(
         CopytradeConstructorParams memory _params
-    )
-        Auth(address(0))
-        ERC2771Context(_params.trustedForwarder)
-        AutomateReady(_params.automate, _params.taskCreator)
-    {
+    ) Auth(address(0)) AutomateReady(_params.automate, _params.taskCreator) {
         FACTORY = IFactory(_params.factory);
         EVENTS = IEvents(_params.events);
         CONFIGS = IConfigs(_params.configs);
@@ -67,7 +62,8 @@ abstract contract Copytrade is
         uint128 accountId = _keyAccounts[key];
         if (accountId != 0) return accountId;
         for (uint i = 0; i < accountIds.length; i++) {
-            if (!_accountTradings[accountIds[i]]) return accountIds[i];
+            uint128 iAccountId = accountIds[i];
+            if (accountIdle(iAccountId)) return iAccountId;
         }
         if (_reverted) revert NoAccountAvailable();
         return 0;
@@ -82,10 +78,21 @@ abstract contract Copytrade is
         return _perpGetOpenPosition(accountId, _market);
     }
 
-    function getAccountTrading(
-        uint128 _accountId
-    ) external view returns (bool) {
-        return _accountTradings[_accountId];
+    function accountIdle(uint128 _accountId) public view returns (bool) {
+        uint256 market = _accountMarkets[_accountId];
+        if (market == 0) return true;
+        (int256 size, , ) = _perpGetOpenPosition(_accountId, market);
+        if (size == 0) return true;
+        return false;
+    }
+
+    function accountIdleByIndex(uint256 _index) public view returns (bool) {
+        uint128 accountId = accountIds[_index];
+        return accountIdle(accountId);
+    }
+
+    function numOfAccounts() external view returns (uint256) {
+        return accountIds.length;
     }
 
     function getKeyAccount(
@@ -140,7 +147,7 @@ abstract contract Copytrade is
                 ++commandIndex;
             }
         }
-        if (msg.sender != owner) {
+        if (msg.sender == executor) {
             _chargeExecutorFee(msg.sender, numCommands);
         }
     }
@@ -232,6 +239,8 @@ abstract contract Copytrade is
                 _perpPlaceOrder(_inputs);
             } else if (_command == Command.PERP_CLOSE_ORDER) {
                 _perpCloseOrder(_inputs);
+            } else if (_command == Command.PERP_WITHDRAW_ALL_MARGIN) {
+                _perpWithdrawAllMargin(_inputs);
             } else if (_command == Command.GELATO_CREATE_TASK) {
                 TaskCommand taskCommand;
                 uint256 market;
@@ -426,6 +435,8 @@ abstract contract Copytrade is
     function _perpPlaceOrder(bytes calldata _inputs) internal virtual {}
 
     function _perpCloseOrder(bytes calldata _inputs) internal virtual {}
+
+    function _perpWithdrawAllMargin(bytes calldata _inputs) internal virtual {}
 
     function _perpExecuteTask(Task memory _task) internal virtual {}
 

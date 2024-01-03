@@ -54,7 +54,8 @@ async function main() {
   const amount = ethers.utils.parseEther("50");
   const isLong = true;
   const isIncrease = true;
-  const sign = isLong === isIncrease ? 1 : -1;
+  // const sign = isLong === isIncrease ? 1 : -1;
+  const sign = -1;
   const sizeDelta = amount
     .mul(leverage)
     .mul(BigNumber.from(10).pow(18))
@@ -112,21 +113,23 @@ async function main() {
       const diffAmount = totalAmount.sub(availableMargin);
       console.log("diffAmount", formatEther(diffAmount));
       commands.push(Command.PERP_MODIFY_COLLATERAL);
-      let modifyAmount: BigNumber;
+      let modifyAmount: BigNumber = BigNumber.from(0);
       if (diffAmount.gt(0)) {
         modifyAmount = diffAmount;
-      } else {
+      } else if (withdrawableMargin.gt(0)) {
         modifyAmount = withdrawableMargin.gt(diffAmount.abs())
           ? diffAmount
           : withdrawableMargin.mul(-1);
       }
-      console.log("modifyAmount", formatEther(modifyAmount));
-      inputs.push(
-        abiDecoder.encode(
-          ["address", "uint256", "int256"],
-          [demoSource.address, ethMarketId, modifyAmount]
-        )
-      );
+      if (!modifyAmount.eq(0)) {
+        console.log("modifyAmount", formatEther(modifyAmount));
+        inputs.push(
+          abiDecoder.encode(
+            ["address", "uint256", "int256"],
+            [demoSource.address, ethMarketId, modifyAmount]
+          )
+        );
+      }
     }
   }
 

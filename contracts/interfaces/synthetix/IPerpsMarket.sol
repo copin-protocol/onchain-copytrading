@@ -130,6 +130,11 @@ interface IPerpsMarket {
                           PERPS MARKET MODULE
     //////////////////////////////////////////////////////////////*/
 
+    // returns account's available margin taking into account positions unrealized pnl
+    function getAvailableMargin(
+        uint128 accountId
+    ) external view returns (int256 availableMargin);
+
     /// @notice Gets the max size of an specific market.
     /// @param marketId id of the market.
     /// @return maxMarketSize the max market size in market asset units.

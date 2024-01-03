@@ -31,8 +31,8 @@ async function main() {
     demoSource as any
   );
 
-  // const accountId = "170141183460469231731687303715884106886";
-  // const accountId = "170141183460469231731687303715884106887";
+  // const accountId = BigNumber.from("170141183460469231731687303715884106886");
+  // const accountId = BigNumber.from("170141183460469231731687303715884106887");
   // console.log("trading", await copytrade.getAccountTrading(accountId));
   // console.log(
   //   (await copytrade.getKeyAccount(demoSource.address, ethMarketId)).toString()

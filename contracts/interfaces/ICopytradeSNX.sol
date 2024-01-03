@@ -9,7 +9,6 @@ interface ICopytradeSNX {
         address events;
         address configs;
         address usdAsset;
-        address trustedForwarder;
         address automate;
         address taskCreator;
         address perpsMarket;

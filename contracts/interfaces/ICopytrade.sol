@@ -10,8 +10,9 @@ interface ICopytrade {
         PERP_MODIFY_COLLATERAL, //4
         PERP_PLACE_ORDER, //5
         PERP_CLOSE_ORDER, //6
-        GELATO_CREATE_TASK, //7
-        GELETO_CANCEL_TASK //8
+        PERP_WITHDRAW_ALL_MARGIN, //7
+        GELATO_CREATE_TASK, //8
+        GELETO_CANCEL_TASK //9
     }
 
     enum TaskCommand {
@@ -30,7 +31,6 @@ interface ICopytrade {
         address events;
         address configs;
         address usdAsset;
-        address trustedForwarder;
         address automate;
         address taskCreator;
     }

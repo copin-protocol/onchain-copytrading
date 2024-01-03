@@ -27,7 +27,6 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
                 configs: _params.configs,
                 usdAsset: _params.usdAsset,
                 automate: _params.automate,
-                trustedForwarder: _params.trustedForwarder,
                 taskCreator: _params.taskCreator
             })
         )
@@ -59,6 +58,15 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
         return PERPS_MARKET.isAuthorized(accountId, permission, address(this));
     }
 
+    function getPerpIdleMargin() external view returns (int256 margin) {
+        for (uint i = 0; i < accountIds.length; i++) {
+            uint128 accountId = accountIds[i];
+            if (accountIdle(accountId)) {
+                margin += PERPS_MARKET.getAvailableMargin(accountId);
+            }
+        }
+    }
+
     function _perpInit() internal override {
         _perpCreateAccount();
     }
@@ -83,31 +91,7 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
             amount := calldataload(add(_inputs.offset, 0x40))
         }
         uint128 accountId = allocatedAccount(source, uint256(marketId), true);
-        uint256 usdcAmount = _toUsdAsset(_abs(amount));
-        if (amount > 0) {
-            USD_ASSET.approve(address(SPOT_MARKET), usdcAmount);
-            SPOT_MARKET.wrap(1, usdcAmount, uint256(amount)); // USDC -> sUSDC
-            SUSDC.approve(address(SPOT_MARKET), uint256(amount));
-            SPOT_MARKET.sell(
-                1,
-                uint256(amount),
-                uint256(amount),
-                CONFIGS.feeReceiver()
-            ); // sUSDC -> USDC
-            SUSD.approve(address(PERPS_MARKET), uint256(amount));
-        }
-        PERPS_MARKET.modifyCollateral(accountId, 0, amount);
-        if (amount < 0) {
-            SUSD.approve(address(SPOT_MARKET), _abs(amount));
-            SPOT_MARKET.buy(
-                1,
-                _abs(amount),
-                _abs(amount),
-                CONFIGS.feeReceiver()
-            ); // sUSD -> sUSDC
-            SUSDC.approve(address(SPOT_MARKET), _abs(amount));
-            SPOT_MARKET.unwrap(1, _abs(amount), usdcAmount); // sUSDC -> USDC
-        }
+        _modifyCollateral(accountId, amount);
     }
 
     function _perpPlaceOrder(bytes calldata _inputs) internal override {
@@ -125,8 +109,12 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
         }
         if (sizeDelta == 0) revert ZeroSizeDelta();
         uint128 accountId = allocatedAccount(source, uint256(marketId), true);
+        bytes32 key = keccak256(abi.encodePacked(source, uint256(marketId)));
+        uint256 keyAccountId = _keyAccounts[key];
+        if (keyAccountId == 0) _keyAccounts[key] = accountId;
+        if (_accountMarkets[accountId] == 0)
+            _accountMarkets[accountId] = uint256(marketId);
         _placeOrder({
-            _source: source,
             _marketId: marketId,
             _accountId: accountId,
             _sizeDelta: sizeDelta,
@@ -149,7 +137,6 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
         }
         uint128 accountId = allocatedAccount(source, uint256(marketId), true);
         _placeOrder({
-            _source: source,
             _marketId: marketId,
             _accountId: accountId,
             _sizeDelta: 0, // sizeDelta 0 = close position
@@ -157,6 +144,16 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
             _trackingCode: TRACKING_CODE,
             _referrer: referrer
         });
+    }
+
+    function _perpWithdrawAllMargin(bytes calldata _inputs) internal override {
+        for (uint i = 0; i < accountIds.length; i++) {
+            uint128 accountId = accountIds[i];
+            if (accountIdle(accountId)) {
+                int256 margin = PERPS_MARKET.getAvailableMargin(accountId);
+                _modifyCollateral(accountId, margin * -1);
+            }
+        }
     }
 
     function _perpValidTask(
@@ -225,8 +222,35 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
         // });
     }
 
+    function _modifyCollateral(uint128 accountId, int256 amount) internal {
+        uint256 usdcAmount = _toUsdAsset(_abs(amount));
+        if (amount > 0) {
+            USD_ASSET.approve(address(SPOT_MARKET), usdcAmount);
+            SPOT_MARKET.wrap(1, usdcAmount, uint256(amount)); // USDC -> sUSDC
+            SUSDC.approve(address(SPOT_MARKET), uint256(amount));
+            SPOT_MARKET.sell(
+                1,
+                uint256(amount),
+                uint256(amount),
+                CONFIGS.feeReceiver()
+            ); // sUSDC -> USDC
+            SUSD.approve(address(PERPS_MARKET), uint256(amount));
+        }
+        PERPS_MARKET.modifyCollateral(accountId, 0, amount);
+        if (amount < 0) {
+            SUSD.approve(address(SPOT_MARKET), _abs(amount));
+            SPOT_MARKET.buy(
+                1,
+                _abs(amount),
+                _abs(amount),
+                CONFIGS.feeReceiver()
+            ); // sUSD -> sUSDC
+            SUSDC.approve(address(SPOT_MARKET), _abs(amount));
+            SPOT_MARKET.unwrap(1, _abs(amount), usdcAmount); // sUSDC -> USDC
+        }
+    }
+
     function _placeOrder(
-        address _source,
         uint128 _marketId,
         uint128 _accountId,
         int128 _sizeDelta,
@@ -234,22 +258,13 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
         bytes32 _trackingCode,
         address _referrer
     ) internal returns (IPerpsMarket.Data memory retOrder, uint256 fees) {
-        bytes32 key = keccak256(abi.encodePacked(_source, uint256(_marketId)));
-        uint256 keyAccountId = _keyAccounts[key];
-        (, , int128 lastSize) = PERPS_MARKET.getOpenPosition(
-            _accountId,
-            _marketId
-        );
-        if (_sizeDelta == 0) _sizeDelta = lastSize * -1;
-
         // close
-        if (lastSize + _sizeDelta == 0) {
-            // release account
-            _accountTradings[_accountId] = false;
-            _keyAccounts[key] = 0;
-        } else {
-            _accountTradings[_accountId] = true;
-            if (keyAccountId == 0) _keyAccounts[key] = _accountId;
+        if (_sizeDelta == 0) {
+            (, , int128 lastSize) = PERPS_MARKET.getOpenPosition(
+                _accountId,
+                _marketId
+            );
+            _sizeDelta = lastSize * -1;
         }
 
         uint256 sizeDeltaUsd = _tokenToUsd(_abs(_sizeDelta), _marketId);
