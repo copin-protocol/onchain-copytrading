@@ -12,7 +12,8 @@ interface ICopytrade {
         PERP_CLOSE_ORDER, //6
         PERP_WITHDRAW_ALL_MARGIN, //7
         GELATO_CREATE_TASK, //8
-        GELETO_CANCEL_TASK //9
+        GELATO_UPDATE_TASK, //9
+        GELETO_CANCEL_TASK //10
     }
 
     enum TaskCommand {
@@ -45,6 +46,7 @@ interface ICopytrade {
     struct Task {
         bytes32 gelatoTaskId;
         TaskCommand command;
+        address source;
         uint256 market;
         int256 collateralDelta;
         int256 sizeDelta;
@@ -63,6 +65,8 @@ interface ICopytrade {
     error EthWithdrawalFailed();
 
     error NoOrderFound();
+
+    error NoTaskFound();
 
     error NoAccountAvailable();
 

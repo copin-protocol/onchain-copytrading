@@ -19,6 +19,7 @@ async function main() {
   );
 
   const idleMargin = await copytrade.getPerpIdleMargin();
+  console.log("idleMargin", ethers.utils.formatEther(idleMargin));
 
   const commands = [Command.PERP_WITHDRAW_ALL_MARGIN];
   const inputs = [0];

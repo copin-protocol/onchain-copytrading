@@ -64,6 +64,7 @@ interface IEvents {
         uint256 taskId,
         bytes32 gelatoTaskId,
         ICopytrade.TaskCommand command,
+        address source,
         uint256 market,
         int256 collateralDelta,
         int256 sizeDelta,
@@ -72,15 +73,52 @@ interface IEvents {
     ) external;
 
     event CreateGelatoTask(
-        address indexed account,
+        address indexed copytrade,
         uint256 indexed taskId,
         bytes32 indexed gelatoTaskId,
         ICopytrade.TaskCommand command,
+        address source,
         uint256 market,
         int256 collateralDelta,
         int256 sizeDelta,
         uint256 triggerPrice,
         uint256 acceptablePrice
+    );
+
+    function emitUpdateGelatoTask(
+        uint256 taskId,
+        bytes32 gelatoTaskId,
+        ICopytrade.TaskCommand command,
+        address source,
+        uint256 market,
+        int256 collateralDelta,
+        int256 sizeDelta,
+        uint256 triggerPrice,
+        uint256 acceptablePrice
+    ) external;
+
+    event UpdateGelatoTask(
+        address indexed copytrade,
+        uint256 indexed taskId,
+        bytes32 indexed gelatoTaskId,
+        ICopytrade.TaskCommand command,
+        address source,
+        uint256 market,
+        int256 collateralDelta,
+        int256 sizeDelta,
+        uint256 triggerPrice,
+        uint256 acceptablePrice
+    );
+
+    function emitCancelGelatoTask(
+        uint256 taskId,
+        bytes32 gelatoTaskId
+    ) external;
+
+    event CancelGelatoTask(
+        address indexed copytrade,
+        uint256 indexed taskId,
+        bytes32 indexed gelatoTaskId
     );
 
     function emitGelatoTaskRunned(

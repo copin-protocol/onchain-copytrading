@@ -110,6 +110,8 @@ abstract contract Copytrade is
 
         // calldata for execute func
         execPayload = abi.encodeCall(this.executeTask, (_taskId));
+
+        if (tx.gasprice > 200 gwei) return (false, bytes("Gas price too high"));
     }
 
     function getTask(
@@ -168,7 +170,7 @@ abstract contract Copytrade is
 
         uint256 fee = _chargeExecutorFee(address(TASK_CREATOR), 1);
 
-        _perpExecuteTask(task);
+        _perpExecuteTask(_taskId, task);
 
         EVENTS.emitGelatoTaskRunned({
             taskId: _taskId,
@@ -243,22 +245,45 @@ abstract contract Copytrade is
                 _perpWithdrawAllMargin(_inputs);
             } else if (_command == Command.GELATO_CREATE_TASK) {
                 TaskCommand taskCommand;
+                address source;
                 uint256 market;
-                int256 collateralData;
+                int256 collateralDelta;
                 int256 sizeDelta;
                 uint256 triggerPrice;
                 uint256 acceptablePrice;
                 assembly {
                     taskCommand := calldataload(_inputs.offset)
-                    market := calldataload(add(_inputs.offset, 0x20))
-                    collateralData := calldataload(add(_inputs.offset, 0x40))
-                    sizeDelta := calldataload(add(_inputs.offset, 0x60))
-                    triggerPrice := calldataload(add(_inputs.offset, 0x80))
-                    acceptablePrice := calldataload(add(_inputs.offset, 0xa0))
+                    source := calldataload(add(_inputs.offset, 0x20))
+                    market := calldataload(add(_inputs.offset, 0x40))
+                    collateralDelta := calldataload(add(_inputs.offset, 0x60))
+                    sizeDelta := calldataload(add(_inputs.offset, 0x80))
+                    triggerPrice := calldataload(add(_inputs.offset, 0xa0))
+                    acceptablePrice := calldataload(add(_inputs.offset, 0xc0))
                 }
                 _createGelatoTask({
                     _command: taskCommand,
+                    _source: source,
                     _market: market,
+                    _collateralDelta: collateralDelta,
+                    _sizeDelta: sizeDelta,
+                    _triggerPrice: triggerPrice,
+                    _acceptablePrice: acceptablePrice
+                });
+            } else if (_command == Command.GELATO_UPDATE_TASK) {
+                uint256 requestTaskId;
+                int256 collateralData;
+                int256 sizeDelta;
+                uint256 triggerPrice;
+                uint256 acceptablePrice;
+                assembly {
+                    requestTaskId := calldataload(_inputs.offset)
+                    collateralData := calldataload(add(_inputs.offset, 0x20))
+                    sizeDelta := calldataload(add(_inputs.offset, 0x40))
+                    triggerPrice := calldataload(add(_inputs.offset, 0x60))
+                    acceptablePrice := calldataload(add(_inputs.offset, 0x80))
+                }
+                _updateGelatoTask({
+                    _taskId: requestTaskId,
                     _collateralDelta: collateralData,
                     _sizeDelta: sizeDelta,
                     _triggerPrice: triggerPrice,
@@ -271,7 +296,7 @@ abstract contract Copytrade is
                 }
                 _cancelGelatoTask(requestTaskId);
             }
-            if (commandIndex > 10) {
+            if (commandIndex > 11) {
                 revert InvalidCommandType(commandIndex);
             }
         }
@@ -314,7 +339,7 @@ abstract contract Copytrade is
     ) internal returns (uint256) {
         uint256 fee;
         if (_executor == address(TASK_CREATOR)) {
-            (fee, ) = automate.getFeeDetails();
+            (fee, ) = _getFeeDetails();
         } else {
             fee = CONFIGS.executorFee();
         }
@@ -368,6 +393,7 @@ abstract contract Copytrade is
 
     function _createGelatoTask(
         TaskCommand _command,
+        address _source,
         uint256 _market,
         int256 _collateralDelta,
         int256 _sizeDelta,
@@ -381,11 +407,11 @@ abstract contract Copytrade is
         }
 
         ModuleData memory moduleData = ModuleData({
-            modules: new Module[](1),
-            args: new bytes[](1)
+            modules: new Module[](2),
+            args: new bytes[](2)
         });
-
         moduleData.modules[0] = Module.RESOLVER;
+        moduleData.modules[1] = Module.PROXY;
         moduleData.args[0] = abi.encode(
             address(this),
             abi.encodeCall(this.checker, taskId)
@@ -393,13 +419,13 @@ abstract contract Copytrade is
 
         bytes32 _gelatoTaskId = ITaskCreator(TASK_CREATOR).createTask({
             execData: abi.encodeCall(this.executeTask, taskId),
-            moduleData: moduleData,
-            feeToken: ETH
+            moduleData: moduleData
         });
 
         _tasks[taskId] = Task({
             gelatoTaskId: _gelatoTaskId,
             command: _command,
+            source: _source,
             market: _market,
             collateralDelta: _collateralDelta,
             sizeDelta: _sizeDelta,
@@ -411,6 +437,7 @@ abstract contract Copytrade is
             taskId: taskId,
             gelatoTaskId: _gelatoTaskId,
             command: _command,
+            source: _source,
             market: _market,
             collateralDelta: _collateralDelta,
             sizeDelta: _sizeDelta,
@@ -421,9 +448,40 @@ abstract contract Copytrade is
         ++taskId;
     }
 
+    function _updateGelatoTask(
+        uint256 _taskId,
+        int256 _collateralDelta,
+        int256 _sizeDelta,
+        uint256 _triggerPrice,
+        uint256 _acceptablePrice
+    ) internal {
+        Task storage task = _tasks[_taskId];
+        if (task.gelatoTaskId == 0) revert NoTaskFound();
+        if (_sizeDelta != 0) task.sizeDelta = _sizeDelta;
+        if (_collateralDelta != 0) task.collateralDelta = _collateralDelta;
+        if (_triggerPrice != 0) task.triggerPrice = _triggerPrice;
+        if (_acceptablePrice != 0) task.acceptablePrice = _acceptablePrice;
+
+        EVENTS.emitUpdateGelatoTask({
+            taskId: _taskId,
+            gelatoTaskId: task.gelatoTaskId,
+            command: task.command,
+            source: task.source,
+            market: task.market,
+            collateralDelta: task.collateralDelta,
+            sizeDelta: task.sizeDelta,
+            triggerPrice: task.triggerPrice,
+            acceptablePrice: task.acceptablePrice
+        });
+    }
+
     function _cancelGelatoTask(uint256 _taskId) internal {
         Task memory task = getTask(_taskId);
         ITaskCreator(TASK_CREATOR).cancelTask(task.gelatoTaskId);
+        EVENTS.emitCancelGelatoTask({
+            taskId: _taskId,
+            gelatoTaskId: task.gelatoTaskId
+        });
     }
 
     function _perpInit() internal virtual {}
@@ -438,7 +496,10 @@ abstract contract Copytrade is
 
     function _perpWithdrawAllMargin(bytes calldata _inputs) internal virtual {}
 
-    function _perpExecuteTask(Task memory _task) internal virtual {}
+    function _perpExecuteTask(
+        uint256 _taskId,
+        Task memory _task
+    ) internal virtual {}
 
     // function _orderKey(
     //     address _market,

@@ -9,8 +9,7 @@ interface ITaskCreator {
 
     function createTask(
         bytes memory execData,
-        ModuleData memory moduleData,
-        address feeToken
+        ModuleData memory moduleData
     ) external returns (bytes32 _gelatoTaskId);
 
     function depositFunds1Balance(address token, uint256 amount) external;

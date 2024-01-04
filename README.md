@@ -8,4 +8,6 @@ Try running some of the following tasks:
 npm run compile
 npm run test
 npm run deploy:snx:testnet
+npx hardhat run --network goerli scripts/deposit1Balance.ts
+npx hardhat run --network testnet scripts/relayCreateTask.ts
 ```

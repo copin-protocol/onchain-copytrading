@@ -43,6 +43,10 @@ async function main() {
     false
   );
 
+  const indexPrice = await perpsMarket.indexPrice(ethMarketId);
+
+  console.log("indexPrice", ethers.utils.formatEther(indexPrice));
+
   const position = await perpsMarket.getOpenPosition(accountId, ethMarketId);
   console.log(
     "position",

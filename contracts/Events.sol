@@ -71,6 +71,7 @@ contract Events is IEvents {
         uint256 taskId,
         bytes32 gelatoTaskId,
         ICopytrade.TaskCommand command,
+        address source,
         uint256 market,
         int256 collateralDelta,
         int256 sizeDelta,
@@ -78,15 +79,52 @@ contract Events is IEvents {
         uint256 acceptablePrice
     ) external override onlyCopytrades {
         emit CreateGelatoTask({
-            account: msg.sender,
+            copytrade: msg.sender,
             taskId: taskId,
             gelatoTaskId: gelatoTaskId,
             command: command,
+            source: source,
             market: market,
             collateralDelta: collateralDelta,
             sizeDelta: sizeDelta,
             triggerPrice: triggerPrice,
             acceptablePrice: acceptablePrice
+        });
+    }
+
+    function emitUpdateGelatoTask(
+        uint256 taskId,
+        bytes32 gelatoTaskId,
+        ICopytrade.TaskCommand command,
+        address source,
+        uint256 market,
+        int256 collateralDelta,
+        int256 sizeDelta,
+        uint256 triggerPrice,
+        uint256 acceptablePrice
+    ) external override onlyCopytrades {
+        emit UpdateGelatoTask({
+            copytrade: msg.sender,
+            taskId: taskId,
+            gelatoTaskId: gelatoTaskId,
+            command: command,
+            source: source,
+            market: market,
+            collateralDelta: collateralDelta,
+            sizeDelta: sizeDelta,
+            triggerPrice: triggerPrice,
+            acceptablePrice: acceptablePrice
+        });
+    }
+
+    function emitCancelGelatoTask(
+        uint256 taskId,
+        bytes32 gelatoTaskId
+    ) external override onlyCopytrades {
+        emit CancelGelatoTask({
+            copytrade: msg.sender,
+            taskId: taskId,
+            gelatoTaskId: gelatoTaskId
         });
     }
 

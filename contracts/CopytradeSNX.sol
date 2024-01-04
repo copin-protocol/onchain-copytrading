@@ -174,52 +174,45 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
         return false;
     }
 
-    function _perpExecuteTask(Task memory _task) internal override {
-        // // define Synthetix PerpsV2 market
-        // IPerpsV2MarketConsolidated market = _getPerpsV2Market(_task.marketKey);
-        // /// @dev conditional order is valid given checker() returns true; define fill price
-        // (uint256 fillPrice, PriceOracleUsed priceOracle) = _sUSDRate(market);
-        // // if conditional order is reduce only, ensure position size is only reduced
-        // if (conditionalOrder.reduceOnly) {
-        //     int256 currentSize = market
-        //         .positions({account: address(this)})
-        //         .size;
-        //     // ensure position exists and incoming size delta is NOT the same sign
-        //     /// @dev if incoming size delta is the same sign, then the conditional order is not reduce only
-        //     if (
-        //         currentSize == 0 ||
-        //         _isSameSign(currentSize, conditionalOrder.sizeDelta)
-        //     ) {
-        //         EVENTS.emitConditionalOrderCancelled({
-        //             conditionalOrderId: _conditionalOrderId,
-        //             gelatoTaskId: conditionalOrder.gelatoTaskId,
-        //             reason: ConditionalOrderCancelledReason
-        //                 .CONDITIONAL_ORDER_CANCELLED_NOT_REDUCE_ONLY
-        //         });
-        //         return;
-        //     }
-        //     // ensure incoming size delta is not larger than current position size
-        //     /// @dev reduce only conditional orders can only reduce position size (i.e. approach size of zero) and
-        //     /// cannot cross that boundary (i.e. short -> long or long -> short)
-        //     if (_abs(conditionalOrder.sizeDelta) > _abs(currentSize)) {
-        //         // bound conditional order size delta to current position size
-        //         conditionalOrder.sizeDelta = -currentSize;
-        //     }
-        // }
-        // // if margin was committed, free it
-        // if (conditionalOrder.collateralDelta > 0) {
-        //     committedMargin -= _abs(conditionalOrder.collateralDelta);
-        // }
-        // // execute trade
-        // _perpsV2ModifyMargin({
-        //     _market: address(market),
-        //     _amount: conditionalOrder.collateralDelta
-        // });
-        // _perpsV2SubmitOffchainDelayedOrder({
-        //     _market: address(market),
-        //     _sizeDelta: conditionalOrder.sizeDelta,
-        //     _acceptablePrice: conditionalOrder.acceptablePrice
-        // });
+    function _perpExecuteTask(
+        uint256 _taskId,
+        Task memory _task
+    ) internal override {
+        uint128 accountId = allocatedAccount(_task.source, _task.market, true);
+
+        if (_task.command == TaskCommand.STOP_ORDER) {
+            (, , int128 lastSize) = PERPS_MARKET.getOpenPosition(
+                accountId,
+                uint128(_task.market)
+            );
+            if (lastSize == 0 || _isSameSign(lastSize, _task.sizeDelta)) {
+                EVENTS.emitGelatoTaskCanceled({
+                    taskId: _taskId,
+                    gelatoTaskId: _task.gelatoTaskId,
+                    reason: "CANT_STOP_ORDER"
+                });
+                return;
+            }
+            if (_abs(_task.sizeDelta) > _abs(lastSize)) {
+                // bound conditional order size delta to current position size
+                _task.sizeDelta = -lastSize;
+            }
+        }
+        // if margin was locked, free it
+        if (_task.collateralDelta > 0) {
+            lockedFund -= _abs(_task.collateralDelta);
+        }
+        if (_task.collateralDelta != 0) {
+            _modifyCollateral(accountId, _task.collateralDelta);
+        }
+        _placeOrder({
+            _marketId: uint128(_task.market),
+            _accountId: accountId,
+            _sizeDelta: int128(_task.sizeDelta),
+            _acceptablePrice: _task.acceptablePrice,
+            _trackingCode: TRACKING_CODE,
+            _referrer: IConfigs(CONFIGS).feeReceiver()
+        });
     }
 
     function _modifyCollateral(uint128 accountId, int256 amount) internal {

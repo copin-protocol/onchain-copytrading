@@ -22,6 +22,14 @@ const config: HardhatUserConfig = {
     hardhat: {
       chainId: 1337,
     },
+    goerli: {
+      url: process.env.GOERLI_NODE_URL,
+      accounts: [
+        process.env.PRIVATE_KEY_1!,
+        process.env.PRIVATE_KEY_2!,
+        process.env.PRIVATE_KEY_3!,
+      ],
+    },
     testnet: {
       url: process.env.TESTNET_NODE_URL,
       accounts: [

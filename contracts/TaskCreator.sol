@@ -32,18 +32,22 @@ contract TaskCreator is AutomateTaskCreator {
 
     function createTask(
         bytes memory execData,
-        ModuleData memory moduleData,
-        address feeToken
+        ModuleData memory moduleData
     ) external onlyCopytrades returns (bytes32 _gelatoTaskId) {
-        _gelatoTaskId = _createTask(msg.sender, execData, moduleData, feeToken);
+        _gelatoTaskId = _createTask(
+            msg.sender,
+            execData,
+            moduleData,
+            address(0)
+        );
         _taskOwners[_gelatoTaskId] = msg.sender;
     }
 
     // fund executions by depositing to 1Balance
-    function depositFunds1Balance(
-        address token,
-        uint256 amount
-    ) external payable {
-        _depositFunds1Balance(amount, token, address(this));
-    }
+    // function depositFunds1Balance(
+    //     address token,
+    //     uint256 amount
+    // ) external payable {
+    //     _depositFunds1Balance(amount, token, address(this));
+    // }
 }
