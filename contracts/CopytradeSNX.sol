@@ -112,14 +112,11 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
         bytes32 key = keccak256(abi.encodePacked(source, uint256(marketId)));
         uint256 keyAccountId = _keyAccounts[key];
         if (keyAccountId == 0) _keyAccounts[key] = accountId;
-        if (_accountMarkets[accountId] == 0)
-            _accountMarkets[accountId] = uint256(marketId);
         _placeOrder({
             _marketId: marketId,
             _accountId: accountId,
             _sizeDelta: sizeDelta,
             _acceptablePrice: acceptablePrice,
-            _trackingCode: TRACKING_CODE,
             _referrer: referrer
         });
     }
@@ -141,7 +138,6 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
             _accountId: accountId,
             _sizeDelta: 0, // sizeDelta 0 = close position
             _acceptablePrice: acceptablePrice,
-            _trackingCode: TRACKING_CODE,
             _referrer: referrer
         });
     }
@@ -162,13 +158,23 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
         uint256 price = _marketIndexPrice(_getMarketId(_task.market));
         if (_task.command == TaskCommand.STOP_ORDER) {
             if (_task.sizeDelta > 0) {
-                // Long: increase position size (buy) once *above* target price
-                // ex: unwind short position once price is above target (prevent further loss)
+                // Long: increase position size (buy) once *above* trigger price
+                // ex: unwind short position once price is above target price (prevent further loss)
                 return price >= _task.triggerPrice;
             } else {
-                // Short: decrease position size (sell) once *below* target price
-                // ex: unwind long position once price is below target (prevent further loss)
+                // Short: decrease position size (sell) once *below* trigger price
+                // ex: unwind long position once price is below trigger price (prevent further loss)
                 return price <= _task.triggerPrice;
+            }
+        } else if (_task.command == TaskCommand.LIMIT_ORDER) {
+            if (_task.sizeDelta > 0) {
+                // Long: increase position size (buy) once *below* trigger price
+                // ex: open long position once price is below trigger price
+                return price <= _task.triggerPrice;
+            } else {
+                // Short: decrease position size (sell) once *above* trigger price
+                // ex: open short position once price is above trigger price
+                return price >= _task.triggerPrice;
             }
         }
         return false;
@@ -186,10 +192,10 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
                 uint128(_task.market)
             );
             if (lastSize == 0 || _isSameSign(lastSize, _task.sizeDelta)) {
-                EVENTS.emitGelatoTaskCanceled({
+                EVENTS.emitCancelGelatoTask({
                     taskId: _taskId,
                     gelatoTaskId: _task.gelatoTaskId,
-                    reason: "CANT_STOP_ORDER"
+                    reason: "INVALID_SIZE"
                 });
                 return;
             }
@@ -210,8 +216,7 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
             _accountId: accountId,
             _sizeDelta: int128(_task.sizeDelta),
             _acceptablePrice: _task.acceptablePrice,
-            _trackingCode: TRACKING_CODE,
-            _referrer: IConfigs(CONFIGS).feeReceiver()
+            _referrer: _task.referrer
         });
     }
 
@@ -248,9 +253,11 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
         uint128 _accountId,
         int128 _sizeDelta,
         uint256 _acceptablePrice,
-        bytes32 _trackingCode,
         address _referrer
-    ) internal returns (IPerpsMarket.Data memory retOrder, uint256 fees) {
+    )
+        internal
+        returns (IPerpsMarket.AsyncOrderData memory retOrder, uint256 fees)
+    {
         // close
         if (_sizeDelta == 0) {
             (, , int128 lastSize) = PERPS_MARKET.getOpenPosition(
@@ -270,10 +277,21 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
                 sizeDelta: _sizeDelta,
                 settlementStrategyId: 0,
                 acceptablePrice: _acceptablePrice,
-                trackingCode: _trackingCode,
-                referrer: _referrer
+                trackingCode: TRACKING_CODE,
+                referrer: _referrer == address(0)
+                    ? IConfigs(CONFIGS).feeReceiver()
+                    : _referrer
             })
         );
+
+        _accountOrders[_accountId] = Order({
+            market: uint256(_marketId),
+            sizeDelta: int256(_sizeDelta),
+            acceptablePrice: _acceptablePrice,
+            commitmentTime: block.timestamp,
+            commitmentBlock: block.number,
+            fees: fees
+        });
 
         _postOrder(uint256(_marketId), sizeDeltaUsd);
     }
@@ -286,6 +304,20 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
             _accountId,
             uint128(_market)
         );
+    }
+
+    function _perpAccountIdle(
+        uint128 _accountId
+    ) internal view override returns (bool) {
+        Order memory order = _accountOrders[_accountId];
+        if (order.market == 0) return true;
+        (, , int128 size) = IPerpsMarket(PERPS_MARKET).getOpenPosition(
+            _accountId,
+            uint128(order.market)
+        );
+        // lock 3 blocks
+        if (size == 0 && block.number > order.commitmentBlock + 3) return true;
+        return false;
     }
 
     function _getMarketId(uint256 _market) internal pure returns (uint128) {

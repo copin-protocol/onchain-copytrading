@@ -76,7 +76,8 @@ contract Events is IEvents {
         int256 collateralDelta,
         int256 sizeDelta,
         uint256 triggerPrice,
-        uint256 acceptablePrice
+        uint256 acceptablePrice,
+        address referrer
     ) external override onlyCopytrades {
         emit CreateGelatoTask({
             copytrade: msg.sender,
@@ -88,16 +89,14 @@ contract Events is IEvents {
             collateralDelta: collateralDelta,
             sizeDelta: sizeDelta,
             triggerPrice: triggerPrice,
-            acceptablePrice: acceptablePrice
+            acceptablePrice: acceptablePrice,
+            referrer: referrer
         });
     }
 
     function emitUpdateGelatoTask(
         uint256 taskId,
         bytes32 gelatoTaskId,
-        ICopytrade.TaskCommand command,
-        address source,
-        uint256 market,
         int256 collateralDelta,
         int256 sizeDelta,
         uint256 triggerPrice,
@@ -107,9 +106,6 @@ contract Events is IEvents {
             copytrade: msg.sender,
             taskId: taskId,
             gelatoTaskId: gelatoTaskId,
-            command: command,
-            source: source,
-            market: market,
             collateralDelta: collateralDelta,
             sizeDelta: sizeDelta,
             triggerPrice: triggerPrice,
@@ -119,12 +115,14 @@ contract Events is IEvents {
 
     function emitCancelGelatoTask(
         uint256 taskId,
-        bytes32 gelatoTaskId
+        bytes32 gelatoTaskId,
+        bytes32 reason
     ) external override onlyCopytrades {
         emit CancelGelatoTask({
             copytrade: msg.sender,
             taskId: taskId,
-            gelatoTaskId: gelatoTaskId
+            gelatoTaskId: gelatoTaskId,
+            reason: reason
         });
     }
 
@@ -140,19 +138,6 @@ contract Events is IEvents {
             gelatoTaskId: gelatoTaskId,
             fillPrice: fillPrice,
             fee: fee
-        });
-    }
-
-    function emitGelatoTaskCanceled(
-        uint256 taskId,
-        bytes32 gelatoTaskId,
-        bytes32 reason
-    ) external override onlyCopytrades {
-        emit GelatoTaskCanceled({
-            account: msg.sender,
-            taskId: taskId,
-            gelatoTaskId: gelatoTaskId,
-            reason: reason
         });
     }
 }

@@ -25,11 +25,11 @@ async function main() {
   // console.log("Factory deployed to:", factory.address);
   const factory = new ethers.Contract(FACTORY_ADDRESS, factoryAbi);
 
-  // const Events = await ethers.getContractFactory("Events");
-  // const events = await Events.deploy(factory.address);
-  // await events.deployed();
-  // console.log("Events deployed to:", events.address);
-  const events = { address: EVENTS_ADDRESS };
+  const Events = await ethers.getContractFactory("Events");
+  const events = await Events.deploy(factory.address);
+  await events.deployed();
+  console.log("Events deployed to:", events.address);
+  // const events = { address: EVENTS_ADDRESS };
 
   // const Configs = await ethers.getContractFactory("Configs");
   // const configs = await Configs.deploy(wallet.address);

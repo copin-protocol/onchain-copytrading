@@ -55,13 +55,6 @@ interface IPerpsMarket {
                            ASYNC ORDER MODULE
     //////////////////////////////////////////////////////////////*/
 
-    struct Data {
-        /// @dev Time at which the Settlement time is open.
-        uint256 settlementTime;
-        /// @dev Order request details.
-        OrderCommitmentRequest request;
-    }
-
     struct OrderCommitmentRequest {
         /// @dev Order market id.
         uint128 marketId;
@@ -79,13 +72,24 @@ interface IPerpsMarket {
         address referrer;
     }
 
+    struct AsyncOrderData {
+        /**
+         * @dev Time at which the order was committed.
+         */
+        uint256 commitmentTime;
+        /**
+         * @dev Order request details.
+         */
+        OrderCommitmentRequest request;
+    }
+
     /// @notice Commit an async order via this function
     /// @param commitment Order commitment data (see OrderCommitmentRequest struct).
     /// @return retOrder order details (see AsyncOrder.Data struct).
     /// @return fees order fees (protocol + settler)
     function commitOrder(
         OrderCommitmentRequest memory commitment
-    ) external returns (Data memory retOrder, uint256 fees);
+    ) external returns (AsyncOrderData memory retOrder, uint256 fees);
 
     /// @notice Simulates what the order fee would be for the given market with the specified size.
     /// @dev Note that this does not include the settlement reward fee, which is based on the strategy type used
@@ -98,9 +102,23 @@ interface IPerpsMarket {
         int128 sizeDelta
     ) external view returns (uint256 orderFees, uint256 fillPrice);
 
+    /**
+     * @notice Get async order claim details
+     * @param accountId id of the account.
+     * @return order async order claim details (see AsyncOrder.Data struct).
+     */
+    function getOrder(
+        uint128 accountId
+    ) external view returns (AsyncOrderData memory order);
+
     /*//////////////////////////////////////////////////////////////
                           PERPS ACCOUNT MODULE
     //////////////////////////////////////////////////////////////*/
+
+    // returns account's available margin taking into account positions unrealized pnl
+    function getAvailableMargin(
+        uint128 accountId
+    ) external view returns (int256 availableMargin);
 
     /// @notice Modify the collateral delegated to the account.
     /// @param accountId Id of the account.
@@ -111,6 +129,10 @@ interface IPerpsMarket {
         uint128 synthMarketId,
         int256 amountDelta
     ) external;
+
+    /*//////////////////////////////////////////////////////////////
+                          PERPS MARKET MODULE
+    //////////////////////////////////////////////////////////////*/
 
     /// @notice Gets the details of an open position.
     /// @param accountId Id of the account.
@@ -125,15 +147,6 @@ interface IPerpsMarket {
         external
         view
         returns (int256 totalPnl, int256 accruedFunding, int128 positionSize);
-
-    /*//////////////////////////////////////////////////////////////
-                          PERPS MARKET MODULE
-    //////////////////////////////////////////////////////////////*/
-
-    // returns account's available margin taking into account positions unrealized pnl
-    function getAvailableMargin(
-        uint128 accountId
-    ) external view returns (int256 availableMargin);
 
     /// @notice Gets the max size of an specific market.
     /// @param marketId id of the market.

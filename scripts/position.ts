@@ -17,7 +17,7 @@ const abiDecoder = ethers.utils.defaultAbiCoder;
 const ethMarketId = 100;
 
 async function main() {
-  const [demoSource] = await ethers.getSigners();
+  const [, demoSource] = await ethers.getSigners();
   const copytrade = new ethers.Contract(
     SMART_COPYTRADE_ADDRESS,
     copytradeAbi,
@@ -42,6 +42,7 @@ async function main() {
     ethMarketId,
     false
   );
+  console.log("accountId", accountId.toString());
 
   const indexPrice = await perpsMarket.indexPrice(ethMarketId);
 
@@ -54,6 +55,8 @@ async function main() {
       [key]: ethers.utils.formatEther(value),
     }))
   );
+  const order = await perpsMarket.getOrder(accountId);
+  console.log("order", order);
   const availableMargin = await perpsMarket.getAvailableMargin(accountId);
   console.log("availableMargin", ethers.utils.formatEther(availableMargin));
   const withdrawableMargin = await perpsMarket.getWithdrawableMargin(accountId);

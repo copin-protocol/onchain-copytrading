@@ -6,7 +6,7 @@ import { Command, SMART_COPYTRADE_ADDRESS } from "../utils/constants";
 import { CopinNetworkConfig } from "../utils/types/config";
 // const { formatUnits } = require("ethers/lib/utils");
 
-export const FUND = ethers.utils.parseEther("200");
+export const FUND = ethers.utils.parseEther("100");
 
 const abiDecoder = ethers.utils.defaultAbiCoder;
 

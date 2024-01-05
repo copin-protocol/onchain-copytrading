@@ -38,7 +38,7 @@ async function main() {
     validForSeconds: 120,
   });
 
-  const [demoSource] = await ethers.getSigners();
+  const [, demoSource] = await ethers.getSigners();
   const copytrade = new ethers.Contract(
     SMART_COPYTRADE_ADDRESS,
     copytradeAbi,
@@ -54,8 +54,8 @@ async function main() {
   const amount = ethers.utils.parseEther("100");
   const isLong = true;
   const isIncrease = true;
-  // const sign = isLong === isIncrease ? 1 : -1;
-  const sign = -1;
+  const sign = isLong === isIncrease ? 1 : -1;
+  // const sign = -1;
   const sizeDelta = amount
     .mul(leverage)
     .mul(BigNumber.from(10).pow(18))
@@ -63,7 +63,7 @@ async function main() {
     .mul(sign);
 
   const commands: Command[] = [];
-  const inputs: string[] = [];
+  const inputs: (string | number)[] = [];
 
   // get account allocated for source trader address + market address
   const accountId = await copytrade.allocatedAccount(
@@ -74,10 +74,10 @@ async function main() {
 
   let totalAmount = amount;
 
-  if (!accountId) {
+  if (accountId.eq(0)) {
     commands.push(Command.PERP_CREATE_ACCOUNT, Command.PERP_MODIFY_COLLATERAL);
     inputs.push(
-      "0",
+      0,
       abiDecoder.encode(
         ["address", "uint256", "int256"],
         [demoSource.address, ethMarketId, totalAmount]
@@ -162,7 +162,7 @@ async function main() {
 
   console.log("commands", commands);
   const tx = await copytrade.execute(commands, inputs, {
-    gasLimit: 2_000_000,
+    gasLimit: commands.length * 1_000_000,
   });
   console.log("tx", tx);
 }

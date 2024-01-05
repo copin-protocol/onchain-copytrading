@@ -69,7 +69,8 @@ interface IEvents {
         int256 collateralDelta,
         int256 sizeDelta,
         uint256 triggerPrice,
-        uint256 acceptablePrice
+        uint256 acceptablePrice,
+        address referrer
     ) external;
 
     event CreateGelatoTask(
@@ -82,15 +83,13 @@ interface IEvents {
         int256 collateralDelta,
         int256 sizeDelta,
         uint256 triggerPrice,
-        uint256 acceptablePrice
+        uint256 acceptablePrice,
+        address referrer
     );
 
     function emitUpdateGelatoTask(
         uint256 taskId,
         bytes32 gelatoTaskId,
-        ICopytrade.TaskCommand command,
-        address source,
-        uint256 market,
         int256 collateralDelta,
         int256 sizeDelta,
         uint256 triggerPrice,
@@ -101,9 +100,6 @@ interface IEvents {
         address indexed copytrade,
         uint256 indexed taskId,
         bytes32 indexed gelatoTaskId,
-        ICopytrade.TaskCommand command,
-        address source,
-        uint256 market,
         int256 collateralDelta,
         int256 sizeDelta,
         uint256 triggerPrice,
@@ -112,13 +108,15 @@ interface IEvents {
 
     function emitCancelGelatoTask(
         uint256 taskId,
-        bytes32 gelatoTaskId
+        bytes32 gelatoTaskId,
+        bytes32 reason
     ) external;
 
     event CancelGelatoTask(
         address indexed copytrade,
         uint256 indexed taskId,
-        bytes32 indexed gelatoTaskId
+        bytes32 indexed gelatoTaskId,
+        bytes32 reason
     );
 
     function emitGelatoTaskRunned(
@@ -134,18 +132,5 @@ interface IEvents {
         bytes32 indexed gelatoTaskId,
         uint256 fillPrice,
         uint256 fee
-    );
-
-    function emitGelatoTaskCanceled(
-        uint256 taskId,
-        bytes32 gelatoTaskId,
-        bytes32 reason
-    ) external;
-
-    event GelatoTaskCanceled(
-        address indexed account,
-        uint256 indexed taskId,
-        bytes32 indexed gelatoTaskId,
-        bytes32 reason
     );
 }

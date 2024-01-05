@@ -21,12 +21,6 @@ interface ICopytrade {
         LIMIT_ORDER //1
     }
 
-    enum OrderStatus {
-        PROCESSING,
-        SUCCESS,
-        FAILURE
-    }
-
     struct CopytradeConstructorParams {
         address factory;
         address events;
@@ -37,10 +31,12 @@ interface ICopytrade {
     }
 
     struct Order {
-        uint256 size;
-        uint256 fee;
-        uint256 submittedTime;
-        OrderStatus status;
+        uint256 market;
+        int256 sizeDelta;
+        uint256 acceptablePrice;
+        uint256 commitmentTime;
+        uint256 commitmentBlock;
+        uint256 fees;
     }
 
     struct Task {
@@ -52,6 +48,7 @@ interface ICopytrade {
         int256 sizeDelta;
         uint256 triggerPrice;
         uint256 acceptablePrice;
+        address referrer;
     }
 
     error LengthMismatch();

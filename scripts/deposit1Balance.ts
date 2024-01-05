@@ -4,6 +4,7 @@ import { FACTORY_ADDRESS } from "../utils/constants";
 import { CopinNetworkConfig } from "../utils/types/config";
 import { parseEther } from "ethers/lib/utils";
 
+// ONLY RUN ON GOERLI AND POLYGON!!!
 async function main() {
   const [wallet1] = await ethers.getSigners();
   const gelato1Balance = new ethers.Contract(

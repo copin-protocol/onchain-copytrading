@@ -30,10 +30,11 @@ abstract contract Copytrade is
     address public executor;
     uint256 public lockedFund;
     uint256 public taskId;
+    uint128[] public accountIds;
+
     mapping(uint256 => Task) internal _tasks;
     mapping(bytes32 => uint128) internal _keyAccounts;
-    mapping(uint128 => uint256) internal _accountMarkets;
-    uint128[] public accountIds;
+    mapping(uint128 => Order) internal _accountOrders;
 
     constructor(
         CopytradeConstructorParams memory _params
@@ -78,12 +79,17 @@ abstract contract Copytrade is
         return _perpGetOpenPosition(accountId, _market);
     }
 
+    function getOrder(
+        address _source,
+        uint256 _market
+    ) public view returns (Order memory order) {
+        bytes32 key = keccak256(abi.encodePacked(_source, _market));
+        uint128 accountId = _keyAccounts[key];
+        order = _accountOrders[accountId];
+    }
+
     function accountIdle(uint128 _accountId) public view returns (bool) {
-        uint256 market = _accountMarkets[_accountId];
-        if (market == 0) return true;
-        (int256 size, , ) = _perpGetOpenPosition(_accountId, market);
-        if (size == 0) return true;
-        return false;
+        return _perpAccountIdle(_accountId);
     }
 
     function accountIdleByIndex(uint256 _index) public view returns (bool) {
@@ -251,6 +257,7 @@ abstract contract Copytrade is
                 int256 sizeDelta;
                 uint256 triggerPrice;
                 uint256 acceptablePrice;
+                address referrer;
                 assembly {
                     taskCommand := calldataload(_inputs.offset)
                     source := calldataload(add(_inputs.offset, 0x20))
@@ -259,6 +266,7 @@ abstract contract Copytrade is
                     sizeDelta := calldataload(add(_inputs.offset, 0x80))
                     triggerPrice := calldataload(add(_inputs.offset, 0xa0))
                     acceptablePrice := calldataload(add(_inputs.offset, 0xc0))
+                    referrer := calldataload(add(_inputs.offset, 0xe0))
                 }
                 _createGelatoTask({
                     _command: taskCommand,
@@ -267,7 +275,8 @@ abstract contract Copytrade is
                     _collateralDelta: collateralDelta,
                     _sizeDelta: sizeDelta,
                     _triggerPrice: triggerPrice,
-                    _acceptablePrice: acceptablePrice
+                    _acceptablePrice: acceptablePrice,
+                    _referrer: referrer
                 });
             } else if (_command == Command.GELATO_UPDATE_TASK) {
                 uint256 requestTaskId;
@@ -387,6 +396,10 @@ abstract contract Copytrade is
         uint256 _market
     ) internal view virtual returns (int256 size, int256 pnl, int256 funding) {}
 
+    function _perpAccountIdle(
+        uint128 _accountId
+    ) internal view virtual returns (bool) {}
+
     function _perpValidTask(
         Task memory _task
     ) internal view virtual returns (bool) {}
@@ -398,7 +411,8 @@ abstract contract Copytrade is
         int256 _collateralDelta,
         int256 _sizeDelta,
         uint256 _triggerPrice,
-        uint256 _acceptablePrice
+        uint256 _acceptablePrice,
+        address _referrer
     ) internal {
         if (_sizeDelta == 0) revert ZeroSizeDelta();
         if (_collateralDelta > 0) {
@@ -430,7 +444,8 @@ abstract contract Copytrade is
             collateralDelta: _collateralDelta,
             sizeDelta: _sizeDelta,
             triggerPrice: _triggerPrice,
-            acceptablePrice: _acceptablePrice
+            acceptablePrice: _acceptablePrice,
+            referrer: _referrer
         });
 
         EVENTS.emitCreateGelatoTask({
@@ -442,7 +457,8 @@ abstract contract Copytrade is
             collateralDelta: _collateralDelta,
             sizeDelta: _sizeDelta,
             triggerPrice: _triggerPrice,
-            acceptablePrice: _acceptablePrice
+            acceptablePrice: _acceptablePrice,
+            referrer: _referrer
         });
 
         ++taskId;
@@ -465,9 +481,6 @@ abstract contract Copytrade is
         EVENTS.emitUpdateGelatoTask({
             taskId: _taskId,
             gelatoTaskId: task.gelatoTaskId,
-            command: task.command,
-            source: task.source,
-            market: task.market,
             collateralDelta: task.collateralDelta,
             sizeDelta: task.sizeDelta,
             triggerPrice: task.triggerPrice,
@@ -480,7 +493,8 @@ abstract contract Copytrade is
         ITaskCreator(TASK_CREATOR).cancelTask(task.gelatoTaskId);
         EVENTS.emitCancelGelatoTask({
             taskId: _taskId,
-            gelatoTaskId: task.gelatoTaskId
+            gelatoTaskId: task.gelatoTaskId,
+            reason: "MANUAL"
         });
     }
 
