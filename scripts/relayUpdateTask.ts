@@ -48,8 +48,8 @@ async function main() {
   const perps = (network.config as CopinNetworkConfig).SNX_PERPS_MARKET;
   const perpsMarket = new ethers.Contract(perps, perpsMarketAbi, signer as any);
 
-  const indexPrice = (await perpsMarket.indexPrice(ethMarketId)).add(
-    ethers.utils.parseEther("100")
+  const indexPrice = (await perpsMarket.indexPrice(ethMarketId)).sub(
+    ethers.utils.parseEther("1")
   );
   const commands: Command[] = [];
   const inputs: string[] = [];
@@ -82,29 +82,11 @@ async function main() {
   console.log("fillPrice", formatEther(fillPrice));
   console.log("sizeDelta", formatEther(sizeDelta));
 
-  commands.push(Command.GELATO_CREATE_TASK);
+  commands.push(Command.GELATO_UPDATE_TASK);
   inputs.push(
     abiDecoder.encode(
-      [
-        "uint256",
-        "address",
-        "uint256",
-        "int256",
-        "int256",
-        "uint256",
-        "uint256",
-        "address",
-      ],
-      [
-        0,
-        demoSource.address,
-        ethMarketId,
-        0,
-        sizeDelta,
-        indexPrice,
-        calculateAcceptablePrice(fillPrice, sizeDelta),
-        demoSource.address,
-      ]
+      ["uint256", "int256", "int256", "uint256", "uint256"],
+      [1, 0, 0, indexPrice, calculateAcceptablePrice(fillPrice, sizeDelta)]
     )
   );
 
