@@ -10,8 +10,10 @@ interface ICopytrade {
         PERP_MODIFY_COLLATERAL, //4
         PERP_PLACE_ORDER, //5
         PERP_CLOSE_ORDER, //6
-        GELATO_CREATE_TASK, //7
-        GELETO_CANCEL_TASK //8
+        PERP_WITHDRAW_ALL_MARGIN, //7
+        GELATO_CREATE_TASK, //8
+        GELATO_UPDATE_TASK, //9
+        GELETO_CANCEL_TASK //10
     }
 
     enum TaskCommand {
@@ -19,37 +21,34 @@ interface ICopytrade {
         LIMIT_ORDER //1
     }
 
-    enum OrderStatus {
-        PROCESSING,
-        SUCCESS,
-        FAILURE
-    }
-
     struct CopytradeConstructorParams {
         address factory;
         address events;
         address configs;
         address usdAsset;
-        address trustedForwarder;
         address automate;
         address taskCreator;
     }
 
     struct Order {
-        uint256 size;
-        uint256 fee;
-        uint256 submittedTime;
-        OrderStatus status;
+        uint256 market;
+        int256 sizeDelta;
+        uint256 acceptablePrice;
+        uint256 commitmentTime;
+        uint256 commitmentBlock;
+        uint256 fees;
     }
 
     struct Task {
         bytes32 gelatoTaskId;
         TaskCommand command;
+        address source;
         uint256 market;
         int256 collateralDelta;
         int256 sizeDelta;
         uint256 triggerPrice;
         uint256 acceptablePrice;
+        address referrer;
     }
 
     error LengthMismatch();
@@ -63,6 +62,8 @@ interface ICopytrade {
     error EthWithdrawalFailed();
 
     error NoOrderFound();
+
+    error NoTaskFound();
 
     error NoAccountAvailable();
 

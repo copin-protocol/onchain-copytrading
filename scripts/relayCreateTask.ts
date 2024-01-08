@@ -48,22 +48,11 @@ async function main() {
   const perps = (network.config as CopinNetworkConfig).SNX_PERPS_MARKET;
   const perpsMarket = new ethers.Contract(perps, perpsMarketAbi, signer as any);
 
-  const indexPrice = await perpsMarket.indexPrice(ethMarketId);
-
-  const leverage = 10;
-  const amount = ethers.utils.parseEther("100");
-  const isLong = true;
-  const isIncrease = true;
-  const sign = isLong === isIncrease ? 1 : -1;
-  // const sign = -1;
-  const sizeDelta = amount
-    .mul(leverage)
-    .mul(BigNumber.from(10).pow(18))
-    .div(indexPrice)
-    .mul(sign);
-
+  const indexPrice = (await perpsMarket.indexPrice(ethMarketId)).add(
+    ethers.utils.parseEther("100")
+  );
   const commands: Command[] = [];
-  const inputs: (string | number)[] = [];
+  const inputs: string[] = [];
 
   // get account allocated for source trader address + market address
   const accountId = await copytrade.allocatedAccount(
@@ -72,66 +61,15 @@ async function main() {
     false
   );
 
-  let totalAmount = amount;
-
-  if (accountId.eq(0)) {
-    commands.push(Command.PERP_CREATE_ACCOUNT, Command.PERP_MODIFY_COLLATERAL);
-    inputs.push(
-      0,
-      abiDecoder.encode(
-        ["address", "uint256", "int256"],
-        [demoSource.address, ethMarketId, totalAmount]
-      )
-    );
-  } else {
-    // const size = TOTAL_MARGIN.mul(BigNumber.from(10).pow(18)).div(indexPrice);
-
-    const position = await perpsMarket.getOpenPosition(accountId, ethMarketId);
-    if (!position.positionSize.eq(0)) {
-      console.log("aaaa");
-      totalAmount = (position.positionSize as BigNumber)
-        .add(sizeDelta)
-        .div(leverage)
-        .mul(indexPrice)
-        .div(BigNumber.from(10).pow(18))
-        .abs();
-    }
-    const availableMargin: BigNumber = await perpsMarket.getAvailableMargin(
-      accountId
-    );
-    const ONE = BigNumber.from(10).pow(18);
-    const withdrawableMargin: BigNumber = (
-      await perpsMarket.getWithdrawableMargin(accountId)
-    ).sub(ONE); // 1 SUSD safety
-    const diff = availableMargin
-      .sub(totalAmount)
-      .abs()
-      .mul(ONE)
-      .div(totalAmount);
-
-    if (diff.gt(ONE.div(100))) {
-      const diffAmount = totalAmount.sub(availableMargin);
-      console.log("diffAmount", formatEther(diffAmount));
-      commands.push(Command.PERP_MODIFY_COLLATERAL);
-      let modifyAmount: BigNumber = BigNumber.from(0);
-      if (diffAmount.gt(0)) {
-        modifyAmount = diffAmount;
-      } else if (withdrawableMargin.gt(0)) {
-        modifyAmount = withdrawableMargin.gt(diffAmount.abs())
-          ? diffAmount
-          : withdrawableMargin.mul(-1);
-      }
-      if (!modifyAmount.eq(0)) {
-        console.log("modifyAmount", formatEther(modifyAmount));
-        inputs.push(
-          abiDecoder.encode(
-            ["address", "uint256", "int256"],
-            [demoSource.address, ethMarketId, modifyAmount]
-          )
-        );
-      }
-    }
+  if (!accountId) {
+    throw Error("Position not found");
   }
+
+  const position = await perpsMarket.getOpenPosition(accountId, ethMarketId);
+  if (position.positionSize.eq(0)) {
+    throw Error("No open position");
+  }
+  const sizeDelta = position.positionSize.mul(-1);
 
   const fillPrice = await perpsMarket.fillPrice(
     ethMarketId,
@@ -143,17 +81,27 @@ async function main() {
   console.log("indexPrice", formatEther(indexPrice));
   console.log("fillPrice", formatEther(fillPrice));
   console.log("sizeDelta", formatEther(sizeDelta));
-  console.log("amount", formatEther(amount));
-  console.log("totalAmount", formatEther(totalAmount));
 
-  commands.push(Command.PERP_PLACE_ORDER);
+  commands.push(Command.GELATO_CREATE_TASK);
   inputs.push(
     abiDecoder.encode(
-      ["address", "uint256", "int256", "uint256", "address"],
       [
+        "uint256",
+        "address",
+        "uint256",
+        "int256",
+        "int256",
+        "uint256",
+        "uint256",
+        "address",
+      ],
+      [
+        0,
         demoSource.address,
         ethMarketId,
+        0,
         sizeDelta,
+        indexPrice,
         calculateAcceptablePrice(fillPrice, sizeDelta),
         demoSource.address,
       ]
@@ -162,7 +110,7 @@ async function main() {
 
   console.log("commands", commands);
   const tx = await copytrade.execute(commands, inputs, {
-    gasLimit: commands.length * 1_000_000,
+    gasLimit: 2_000_000,
   });
   console.log("tx", tx);
 }

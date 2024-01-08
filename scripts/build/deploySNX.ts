@@ -15,8 +15,6 @@ async function main() {
   const sUSD = (network.config as CopinNetworkConfig).SNX_SUSD;
   const perpsMarket = (network.config as CopinNetworkConfig).SNX_PERPS_MARKET;
   const spotMarket = (network.config as CopinNetworkConfig).SNX_SPOT_MARKET;
-  const trustedForwarder = (network.config as CopinNetworkConfig)
-    .TRUSTED_FORWARDER;
   const automate = (network.config as CopinNetworkConfig).AUTOMATE;
 
   const [wallet] = await ethers.getSigners();
@@ -27,11 +25,11 @@ async function main() {
   // console.log("Factory deployed to:", factory.address);
   const factory = new ethers.Contract(FACTORY_ADDRESS, factoryAbi);
 
-  // const Events = await ethers.getContractFactory("Events");
-  // const events = await Events.deploy(factory.address);
-  // await events.deployed();
-  // console.log("Events deployed to:", events.address);
-  const events = { address: EVENTS_ADDRESS };
+  const Events = await ethers.getContractFactory("Events");
+  const events = await Events.deploy(factory.address);
+  await events.deployed();
+  console.log("Events deployed to:", events.address);
+  // const events = { address: EVENTS_ADDRESS };
 
   // const Configs = await ethers.getContractFactory("Configs");
   // const configs = await Configs.deploy(wallet.address);
@@ -51,7 +49,6 @@ async function main() {
     events: events.address,
     configs: configs.address,
     usdAsset,
-    trustedForwarder,
     automate,
     taskCreator: taskCreator.address,
     perpsMarket,
@@ -85,7 +82,6 @@ async function main() {
         events: events.address,
         configs: configs.address,
         usdAsset,
-        trustedForwarder,
         automate,
         taskCreator: taskCreator.address,
         perpsMarket,

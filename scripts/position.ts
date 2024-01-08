@@ -17,7 +17,7 @@ const abiDecoder = ethers.utils.defaultAbiCoder;
 const ethMarketId = 100;
 
 async function main() {
-  const [demoSource] = await ethers.getSigners();
+  const [, demoSource] = await ethers.getSigners();
   const copytrade = new ethers.Contract(
     SMART_COPYTRADE_ADDRESS,
     copytradeAbi,
@@ -31,8 +31,8 @@ async function main() {
     demoSource as any
   );
 
-  // const accountId = "170141183460469231731687303715884106886";
-  // const accountId = "170141183460469231731687303715884106887";
+  // const accountId = BigNumber.from("170141183460469231731687303715884106886");
+  // const accountId = BigNumber.from("170141183460469231731687303715884106887");
   // console.log("trading", await copytrade.getAccountTrading(accountId));
   // console.log(
   //   (await copytrade.getKeyAccount(demoSource.address, ethMarketId)).toString()
@@ -42,6 +42,11 @@ async function main() {
     ethMarketId,
     false
   );
+  console.log("accountId", accountId.toString());
+
+  const indexPrice = await perpsMarket.indexPrice(ethMarketId);
+
+  console.log("indexPrice", ethers.utils.formatEther(indexPrice));
 
   const position = await perpsMarket.getOpenPosition(accountId, ethMarketId);
   console.log(
@@ -50,6 +55,8 @@ async function main() {
       [key]: ethers.utils.formatEther(value),
     }))
   );
+  const order = await perpsMarket.getOrder(accountId);
+  console.log("order", order);
   const availableMargin = await perpsMarket.getAvailableMargin(accountId);
   console.log("availableMargin", ethers.utils.formatEther(availableMargin));
   const withdrawableMargin = await perpsMarket.getWithdrawableMargin(accountId);

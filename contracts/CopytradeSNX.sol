@@ -27,7 +27,6 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
                 configs: _params.configs,
                 usdAsset: _params.usdAsset,
                 automate: _params.automate,
-                trustedForwarder: _params.trustedForwarder,
                 taskCreator: _params.taskCreator
             })
         )
@@ -59,6 +58,15 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
         return PERPS_MARKET.isAuthorized(accountId, permission, address(this));
     }
 
+    function getPerpIdleMargin() external view returns (int256 margin) {
+        for (uint i = 0; i < accountIds.length; i++) {
+            uint128 accountId = accountIds[i];
+            if (accountIdle(accountId)) {
+                margin += PERPS_MARKET.getAvailableMargin(accountId);
+            }
+        }
+    }
+
     function _perpInit() internal override {
         _perpCreateAccount();
     }
@@ -83,6 +91,136 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
             amount := calldataload(add(_inputs.offset, 0x40))
         }
         uint128 accountId = allocatedAccount(source, uint256(marketId), true);
+        _modifyCollateral(accountId, amount);
+    }
+
+    function _perpPlaceOrder(bytes calldata _inputs) internal override {
+        address source;
+        uint128 marketId;
+        int128 sizeDelta;
+        uint256 acceptablePrice;
+        address referrer;
+        assembly {
+            source := calldataload(_inputs.offset)
+            marketId := calldataload(add(_inputs.offset, 0x20))
+            sizeDelta := calldataload(add(_inputs.offset, 0x40))
+            acceptablePrice := calldataload(add(_inputs.offset, 0x60))
+            referrer := calldataload(add(_inputs.offset, 0x80))
+        }
+        if (sizeDelta == 0) revert ZeroSizeDelta();
+        uint128 accountId = allocatedAccount(source, uint256(marketId), true);
+        bytes32 key = keccak256(abi.encodePacked(source, uint256(marketId)));
+        uint256 keyAccountId = _keyAccounts[key];
+        if (keyAccountId == 0) _keyAccounts[key] = accountId;
+        _placeOrder({
+            _marketId: marketId,
+            _accountId: accountId,
+            _sizeDelta: sizeDelta,
+            _acceptablePrice: acceptablePrice,
+            _referrer: referrer
+        });
+    }
+
+    function _perpCloseOrder(bytes calldata _inputs) internal override {
+        address source;
+        uint128 marketId;
+        uint256 acceptablePrice;
+        address referrer;
+        assembly {
+            source := calldataload(_inputs.offset)
+            marketId := calldataload(add(_inputs.offset, 0x20))
+            acceptablePrice := calldataload(add(_inputs.offset, 0x40))
+            referrer := calldataload(add(_inputs.offset, 0x60))
+        }
+        uint128 accountId = allocatedAccount(source, uint256(marketId), true);
+        _placeOrder({
+            _marketId: marketId,
+            _accountId: accountId,
+            _sizeDelta: 0, // sizeDelta 0 = close position
+            _acceptablePrice: acceptablePrice,
+            _referrer: referrer
+        });
+    }
+
+    function _perpWithdrawAllMargin(bytes calldata _inputs) internal override {
+        for (uint i = 0; i < accountIds.length; i++) {
+            uint128 accountId = accountIds[i];
+            if (accountIdle(accountId)) {
+                int256 margin = PERPS_MARKET.getAvailableMargin(accountId);
+                _modifyCollateral(accountId, margin * -1);
+            }
+        }
+    }
+
+    function _perpValidTask(
+        Task memory _task
+    ) internal view override returns (bool) {
+        uint256 price = _marketIndexPrice(_getMarketId(_task.market));
+        if (_task.command == TaskCommand.STOP_ORDER) {
+            if (_task.sizeDelta > 0) {
+                // Long: increase position size (buy) once *above* trigger price
+                // ex: unwind short position once price is above target price (prevent further loss)
+                return price >= _task.triggerPrice;
+            } else {
+                // Short: decrease position size (sell) once *below* trigger price
+                // ex: unwind long position once price is below trigger price (prevent further loss)
+                return price <= _task.triggerPrice;
+            }
+        } else if (_task.command == TaskCommand.LIMIT_ORDER) {
+            if (_task.sizeDelta > 0) {
+                // Long: increase position size (buy) once *below* trigger price
+                // ex: open long position once price is below trigger price
+                return price <= _task.triggerPrice;
+            } else {
+                // Short: decrease position size (sell) once *above* trigger price
+                // ex: open short position once price is above trigger price
+                return price >= _task.triggerPrice;
+            }
+        }
+        return false;
+    }
+
+    function _perpExecuteTask(
+        uint256 _taskId,
+        Task memory _task
+    ) internal override {
+        uint128 accountId = allocatedAccount(_task.source, _task.market, true);
+
+        if (_task.command == TaskCommand.STOP_ORDER) {
+            (, , int128 lastSize) = PERPS_MARKET.getOpenPosition(
+                accountId,
+                uint128(_task.market)
+            );
+            if (lastSize == 0 || _isSameSign(lastSize, _task.sizeDelta)) {
+                EVENTS.emitCancelGelatoTask({
+                    taskId: _taskId,
+                    gelatoTaskId: _task.gelatoTaskId,
+                    reason: "INVALID_SIZE"
+                });
+                return;
+            }
+            if (_abs(_task.sizeDelta) > _abs(lastSize)) {
+                // bound conditional order size delta to current position size
+                _task.sizeDelta = -lastSize;
+            }
+        }
+        // if margin was locked, free it
+        if (_task.collateralDelta > 0) {
+            lockedFund -= _abs(_task.collateralDelta);
+        }
+        if (_task.collateralDelta != 0) {
+            _modifyCollateral(accountId, _task.collateralDelta);
+        }
+        _placeOrder({
+            _marketId: uint128(_task.market),
+            _accountId: accountId,
+            _sizeDelta: int128(_task.sizeDelta),
+            _acceptablePrice: _task.acceptablePrice,
+            _referrer: _task.referrer
+        });
+    }
+
+    function _modifyCollateral(uint128 accountId, int256 amount) internal {
         uint256 usdcAmount = _toUsdAsset(_abs(amount));
         if (amount > 0) {
             USD_ASSET.approve(address(SPOT_MARKET), usdcAmount);
@@ -110,146 +248,23 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
         }
     }
 
-    function _perpPlaceOrder(bytes calldata _inputs) internal override {
-        address source;
-        uint128 marketId;
-        int128 sizeDelta;
-        uint256 acceptablePrice;
-        address referrer;
-        assembly {
-            source := calldataload(_inputs.offset)
-            marketId := calldataload(add(_inputs.offset, 0x20))
-            sizeDelta := calldataload(add(_inputs.offset, 0x40))
-            acceptablePrice := calldataload(add(_inputs.offset, 0x60))
-            referrer := calldataload(add(_inputs.offset, 0x80))
-        }
-        if (sizeDelta == 0) revert ZeroSizeDelta();
-        uint128 accountId = allocatedAccount(source, uint256(marketId), true);
-        _placeOrder({
-            _source: source,
-            _marketId: marketId,
-            _accountId: accountId,
-            _sizeDelta: sizeDelta,
-            _acceptablePrice: acceptablePrice,
-            _trackingCode: TRACKING_CODE,
-            _referrer: referrer
-        });
-    }
-
-    function _perpCloseOrder(bytes calldata _inputs) internal override {
-        address source;
-        uint128 marketId;
-        uint256 acceptablePrice;
-        address referrer;
-        assembly {
-            source := calldataload(_inputs.offset)
-            marketId := calldataload(add(_inputs.offset, 0x20))
-            acceptablePrice := calldataload(add(_inputs.offset, 0x40))
-            referrer := calldataload(add(_inputs.offset, 0x60))
-        }
-        uint128 accountId = allocatedAccount(source, uint256(marketId), true);
-        _placeOrder({
-            _source: source,
-            _marketId: marketId,
-            _accountId: accountId,
-            _sizeDelta: 0, // sizeDelta 0 = close position
-            _acceptablePrice: acceptablePrice,
-            _trackingCode: TRACKING_CODE,
-            _referrer: referrer
-        });
-    }
-
-    function _perpValidTask(
-        Task memory _task
-    ) internal view override returns (bool) {
-        uint256 price = _marketIndexPrice(_getMarketId(_task.market));
-        if (_task.command == TaskCommand.STOP_ORDER) {
-            if (_task.sizeDelta > 0) {
-                // Long: increase position size (buy) once *above* target price
-                // ex: unwind short position once price is above target (prevent further loss)
-                return price >= _task.triggerPrice;
-            } else {
-                // Short: decrease position size (sell) once *below* target price
-                // ex: unwind long position once price is below target (prevent further loss)
-                return price <= _task.triggerPrice;
-            }
-        }
-        return false;
-    }
-
-    function _perpExecuteTask(Task memory _task) internal override {
-        // // define Synthetix PerpsV2 market
-        // IPerpsV2MarketConsolidated market = _getPerpsV2Market(_task.marketKey);
-        // /// @dev conditional order is valid given checker() returns true; define fill price
-        // (uint256 fillPrice, PriceOracleUsed priceOracle) = _sUSDRate(market);
-        // // if conditional order is reduce only, ensure position size is only reduced
-        // if (conditionalOrder.reduceOnly) {
-        //     int256 currentSize = market
-        //         .positions({account: address(this)})
-        //         .size;
-        //     // ensure position exists and incoming size delta is NOT the same sign
-        //     /// @dev if incoming size delta is the same sign, then the conditional order is not reduce only
-        //     if (
-        //         currentSize == 0 ||
-        //         _isSameSign(currentSize, conditionalOrder.sizeDelta)
-        //     ) {
-        //         EVENTS.emitConditionalOrderCancelled({
-        //             conditionalOrderId: _conditionalOrderId,
-        //             gelatoTaskId: conditionalOrder.gelatoTaskId,
-        //             reason: ConditionalOrderCancelledReason
-        //                 .CONDITIONAL_ORDER_CANCELLED_NOT_REDUCE_ONLY
-        //         });
-        //         return;
-        //     }
-        //     // ensure incoming size delta is not larger than current position size
-        //     /// @dev reduce only conditional orders can only reduce position size (i.e. approach size of zero) and
-        //     /// cannot cross that boundary (i.e. short -> long or long -> short)
-        //     if (_abs(conditionalOrder.sizeDelta) > _abs(currentSize)) {
-        //         // bound conditional order size delta to current position size
-        //         conditionalOrder.sizeDelta = -currentSize;
-        //     }
-        // }
-        // // if margin was committed, free it
-        // if (conditionalOrder.collateralDelta > 0) {
-        //     committedMargin -= _abs(conditionalOrder.collateralDelta);
-        // }
-        // // execute trade
-        // _perpsV2ModifyMargin({
-        //     _market: address(market),
-        //     _amount: conditionalOrder.collateralDelta
-        // });
-        // _perpsV2SubmitOffchainDelayedOrder({
-        //     _market: address(market),
-        //     _sizeDelta: conditionalOrder.sizeDelta,
-        //     _acceptablePrice: conditionalOrder.acceptablePrice
-        // });
-    }
-
     function _placeOrder(
-        address _source,
         uint128 _marketId,
         uint128 _accountId,
         int128 _sizeDelta,
         uint256 _acceptablePrice,
-        bytes32 _trackingCode,
         address _referrer
-    ) internal returns (IPerpsMarket.Data memory retOrder, uint256 fees) {
-        bytes32 key = keccak256(abi.encodePacked(_source, uint256(_marketId)));
-        uint256 keyAccountId = _keyAccounts[key];
-        (, , int128 lastSize) = PERPS_MARKET.getOpenPosition(
-            _accountId,
-            _marketId
-        );
-        if (_sizeDelta == 0) _sizeDelta = lastSize * -1;
-
+    )
+        internal
+        returns (IPerpsMarket.AsyncOrderData memory retOrder, uint256 fees)
+    {
         // close
-        if (lastSize + _sizeDelta == 0) {
-            // release account
-            _accountTradings[_accountId] = false;
-            _keyAccounts[key] = 0;
-        } else {
-            _accountTradings[_accountId] = true;
-            if (keyAccountId == 0) _keyAccounts[key] = _accountId;
+        if (_sizeDelta == 0) {
+            (, , int128 lastSize) = PERPS_MARKET.getOpenPosition(
+                _accountId,
+                _marketId
+            );
+            _sizeDelta = lastSize * -1;
         }
 
         uint256 sizeDeltaUsd = _tokenToUsd(_abs(_sizeDelta), _marketId);
@@ -262,10 +277,21 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
                 sizeDelta: _sizeDelta,
                 settlementStrategyId: 0,
                 acceptablePrice: _acceptablePrice,
-                trackingCode: _trackingCode,
-                referrer: _referrer
+                trackingCode: TRACKING_CODE,
+                referrer: _referrer == address(0)
+                    ? IConfigs(CONFIGS).feeReceiver()
+                    : _referrer
             })
         );
+
+        _accountOrders[_accountId] = Order({
+            market: uint256(_marketId),
+            sizeDelta: int256(_sizeDelta),
+            acceptablePrice: _acceptablePrice,
+            commitmentTime: block.timestamp,
+            commitmentBlock: block.number,
+            fees: fees
+        });
 
         _postOrder(uint256(_marketId), sizeDeltaUsd);
     }
@@ -278,6 +304,20 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
             _accountId,
             uint128(_market)
         );
+    }
+
+    function _perpAccountIdle(
+        uint128 _accountId
+    ) internal view override returns (bool) {
+        Order memory order = _accountOrders[_accountId];
+        if (order.market == 0) return true;
+        (, , int128 size) = IPerpsMarket(PERPS_MARKET).getOpenPosition(
+            _accountId,
+            uint128(order.market)
+        );
+        // lock 3 blocks
+        if (size == 0 && block.number > order.commitmentBlock + 3) return true;
+        return false;
     }
 
     function _getMarketId(uint256 _market) internal pure returns (uint128) {

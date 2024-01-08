@@ -6,7 +6,7 @@ import { Command, SMART_COPYTRADE_ADDRESS } from "../utils/constants";
 import { CopinNetworkConfig } from "../utils/types/config";
 // const { formatUnits } = require("ethers/lib/utils");
 
-export const FUND = ethers.utils.parseEther("100");
+export const FUND = ethers.utils.parseEther("200");
 
 const abiDecoder = ethers.utils.defaultAbiCoder;
 
@@ -18,15 +18,11 @@ async function main() {
     wallet2 as any
   );
 
-  const usdAsset = (network.config as CopinNetworkConfig).USD_ASSET;
+  const idleMargin = await copytrade.getPerpIdleMargin();
+  console.log("idleMargin", ethers.utils.formatEther(idleMargin));
 
-  const fund = new ethers.Contract(usdAsset, mockERC20, wallet2 as any);
-
-  const approvedTx = await fund.approve(copytrade.address, FUND);
-  console.log("approvedTx", approvedTx);
-
-  const commands = [Command.OWNER_MODIFY_FUND];
-  const inputs = [abiDecoder.encode(["int256"], [FUND])];
+  const commands = [Command.PERP_WITHDRAW_ALL_MARGIN];
+  const inputs = [0];
   const tx = await copytrade.execute(commands, inputs);
   console.log("tx", tx);
 }

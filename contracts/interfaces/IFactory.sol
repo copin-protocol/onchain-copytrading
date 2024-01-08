@@ -38,7 +38,7 @@ interface IFactory {
     ) external;
 
     function newCopytrade(
-        address initialDelegate
+        address initialExecutor
     ) external returns (address payable accountAddress);
 
     /// @dev this *will* impact all existing accounts
