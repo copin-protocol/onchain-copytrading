@@ -54,19 +54,18 @@ abstract contract Copytrade is
         return USD_ASSET.balanceOf(address(this)) - lockedFund;
     }
 
-    function allocatedAccount(
+    function getAllocatedAccount(
         address _source,
-        uint256 _market,
-        bool _reverted
+        uint256 _market
     ) public view returns (uint128) {
         bytes32 key = keccak256(abi.encodePacked(_source, _market));
         uint128 accountId = _keyAccounts[key];
-        if (accountId != 0) return accountId;
+        if (accountId != 0 && _accountOrders[accountId].market == _market)
+            return accountId;
         for (uint i = 0; i < accountIds.length; i++) {
             uint128 iAccountId = accountIds[i];
             if (accountIdle(iAccountId)) return iAccountId;
         }
-        if (_reverted) revert NoAccountAvailable();
         return 0;
     }
 
@@ -141,6 +140,15 @@ abstract contract Copytrade is
         });
     }
 
+    function closePosition(
+        uint128 _accountId,
+        uint256 _market,
+        uint256 _acceptablePrice
+    ) external {
+        if (!isAuth(msg.sender)) revert Unauthorized();
+        _perpClosePosition(_accountId, _market, _acceptablePrice);
+    }
+
     function execute(
         Command[] calldata _commands,
         bytes[] calldata _inputs
@@ -198,6 +206,14 @@ abstract contract Copytrade is
         if (_fundOut > availableFund()) {
             revert InsufficientAvailableFund(availableFund(), _fundOut);
         }
+    }
+
+    function _allocatedAccount(
+        address _source,
+        uint256 _market
+    ) internal view returns (uint128 accountId) {
+        accountId = getAllocatedAccount(_source, _market);
+        if (accountId == 0) revert NoAccountAvailable();
     }
 
     function _validTask(uint256 _taskId) internal view returns (bool) {
@@ -507,6 +523,12 @@ abstract contract Copytrade is
     function _perpPlaceOrder(bytes calldata _inputs) internal virtual {}
 
     function _perpCloseOrder(bytes calldata _inputs) internal virtual {}
+
+    function _perpClosePosition(
+        uint128 _accountId,
+        uint256 _market,
+        uint256 _acceptablePrice
+    ) internal virtual {}
 
     function _perpWithdrawAllMargin(bytes calldata _inputs) internal virtual {}
 

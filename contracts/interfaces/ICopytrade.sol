@@ -85,10 +85,9 @@ interface ICopytrade {
 
     function availableFund() external view returns (uint256);
 
-    function allocatedAccount(
+    function getAllocatedAccount(
         address _source,
-        uint256 _market,
-        bool _reverted
+        uint256 _market
     ) external view returns (uint128);
 
     function getOpenPosition(

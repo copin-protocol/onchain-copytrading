@@ -10,3 +10,6 @@ export const calculateAcceptablePrice = (
     ? marketPrice.mul(priceImpactDecimalPct.add(oneBN)).div(oneBN)
     : marketPrice.mul(oneBN.sub(priceImpactDecimalPct)).div(oneBN);
 };
+
+export const getTradeSign = (isLong: boolean, isIncrease: boolean) =>
+  isLong === isIncrease ? 1 : -1;

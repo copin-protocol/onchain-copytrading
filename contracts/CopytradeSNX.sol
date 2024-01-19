@@ -67,6 +67,13 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
         }
     }
 
+    function getPerpMargin() external view returns (int256 margin) {
+        for (uint i = 0; i < accountIds.length; i++) {
+            uint128 accountId = accountIds[i];
+            margin += PERPS_MARKET.getAvailableMargin(accountId);
+        }
+    }
+
     function _perpInit() internal override {
         _perpCreateAccount();
     }
@@ -90,7 +97,7 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
             marketId := calldataload(add(_inputs.offset, 0x20))
             amount := calldataload(add(_inputs.offset, 0x40))
         }
-        uint128 accountId = allocatedAccount(source, uint256(marketId), true);
+        uint128 accountId = _allocatedAccount(source, uint256(marketId));
         _modifyCollateral(accountId, amount);
     }
 
@@ -108,7 +115,7 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
             referrer := calldataload(add(_inputs.offset, 0x80))
         }
         if (sizeDelta == 0) revert ZeroSizeDelta();
-        uint128 accountId = allocatedAccount(source, uint256(marketId), true);
+        uint128 accountId = _allocatedAccount(source, uint256(marketId));
         bytes32 key = keccak256(abi.encodePacked(source, uint256(marketId)));
         uint256 keyAccountId = _keyAccounts[key];
         if (keyAccountId == 0) _keyAccounts[key] = accountId;
@@ -132,13 +139,27 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
             acceptablePrice := calldataload(add(_inputs.offset, 0x40))
             referrer := calldataload(add(_inputs.offset, 0x60))
         }
-        uint128 accountId = allocatedAccount(source, uint256(marketId), true);
+        uint128 accountId = _allocatedAccount(source, uint256(marketId));
         _placeOrder({
             _marketId: marketId,
             _accountId: accountId,
             _sizeDelta: 0, // sizeDelta 0 = close position
             _acceptablePrice: acceptablePrice,
             _referrer: referrer
+        });
+    }
+
+    function _perpClosePosition(
+        uint128 _accountId,
+        uint256 _market,
+        uint256 _acceptablePrice
+    ) internal override {
+        _placeOrder({
+            _marketId: uint128(_market),
+            _accountId: _accountId,
+            _sizeDelta: 0, // sizeDelta 0 = close position
+            _acceptablePrice: _acceptablePrice,
+            _referrer: address(0)
         });
     }
 
@@ -184,7 +205,7 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
         uint256 _taskId,
         Task memory _task
     ) internal override {
-        uint128 accountId = allocatedAccount(_task.source, _task.market, true);
+        uint128 accountId = _allocatedAccount(_task.source, _task.market);
 
         if (_task.command == TaskCommand.STOP_ORDER) {
             (, , int128 lastSize) = PERPS_MARKET.getOpenPosition(

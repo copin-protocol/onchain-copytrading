@@ -23,3 +23,8 @@ export enum Command {
   GELATO_UPDATE_TASK = 9,
   GELETO_CANCEL_TASK = 10,
 }
+
+export const MARKET_IDS = {
+  ETH: 100,
+  BTC: 200,
+};

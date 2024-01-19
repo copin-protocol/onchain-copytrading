@@ -1,7 +1,5 @@
-import { ethers, network } from "hardhat";
+import { ethers } from "hardhat";
 import gelato1BalanceAbi from "../utils/abis/gelato1BalanceAbi";
-import { FACTORY_ADDRESS } from "../utils/constants";
-import { CopinNetworkConfig } from "../utils/types/config";
 import { parseEther } from "ethers/lib/utils";
 
 // ONLY RUN ON GOERLI AND POLYGON!!!

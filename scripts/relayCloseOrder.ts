@@ -1,44 +1,23 @@
 import { formatEther, parseEther } from "@ethersproject/units";
-import { Defender } from "@openzeppelin/defender-sdk";
 import { ethers, network } from "hardhat";
 import { abi as copytradeAbi } from "../artifacts/contracts/CopytradeSNX.sol/CopytradeSNX.json";
-import { abi as mockERC20 } from "../artifacts/contracts/test/MockERC20.sol/MockERC20.json";
-import {
-  Command,
-  RELAYER_API_KEY,
-  RELAYER_API_SECRET,
-  SMART_COPYTRADE_ADDRESS,
-} from "../utils/constants";
+import { Command, SMART_COPYTRADE_ADDRESS } from "../utils/constants";
 import { CopinNetworkConfig } from "../utils/types/config";
 import perpsMarketAbi from "../utils/abis/perpsMarketAbi";
-import spotMarketAbi from "../utils/abis/spotMarketAbi";
-import { BigNumber } from "ethers";
 import { calculateAcceptablePrice } from "../utils/perps";
-// const { formatUnits } = require("ethers/lib/utils");
+import { getRelaySigner } from "../utils/relay";
 
 const abiDecoder = ethers.utils.defaultAbiCoder;
 
-const ethMarketId = 100;
+const ethMarketId = 200;
 
 async function main() {
-  const credentials = {
-    relayerApiKey: RELAYER_API_KEY,
-    relayerApiSecret: RELAYER_API_SECRET,
+  const signer = getRelaySigner();
+
+  const demoSource = {
+    address: SMART_COPYTRADE_ADDRESS,
   };
-  const client = new Defender(credentials);
 
-  const provider = client.relaySigner.getProvider();
-  // const config = network.config as CopinNetworkConfig;
-  // const nodeURL = config.url;
-  // const provider = new JsonRpcProvider(nodeURL);
-  // const signer: any = new ethers.Wallet(process.env.PRIVATE_KEY_3!, provider);
-
-  const signer = client.relaySigner.getSigner(provider, {
-    speed: "fast",
-    validForSeconds: 120,
-  });
-
-  const [demoSource] = await ethers.getSigners();
   const copytrade = new ethers.Contract(
     SMART_COPYTRADE_ADDRESS,
     copytradeAbi,
@@ -53,13 +32,12 @@ async function main() {
   const inputs: string[] = [];
 
   // get account allocated for source trader address + market address
-  const accountId = await copytrade.allocatedAccount(
+  const accountId = await copytrade.getAllocatedAccount(
     demoSource.address,
-    ethMarketId,
-    false
+    ethMarketId
   );
 
-  if (!accountId) {
+  if (accountId.eq(0)) {
     throw Error("Position not found");
   }
 
@@ -68,20 +46,20 @@ async function main() {
     throw Error("No open position");
   }
   const sizeDelta = position.positionSize.mul(-1);
-  const ONE = BigNumber.from(10).pow(18);
-  const withdrawableMargin: BigNumber = (
-    await perpsMarket.getWithdrawableMargin(accountId)
-  ).sub(ONE); // 1 SUSD safety
+  // const ONE = BigNumber.from(10).pow(18);
+  // const withdrawableMargin: BigNumber = (
+  //   await perpsMarket.getWithdrawableMargin(accountId)
+  // ).sub(ONE); // 1 SUSD safety
 
-  if (withdrawableMargin.gt(0)) {
-    commands.push(Command.PERP_MODIFY_COLLATERAL);
-    inputs.push(
-      abiDecoder.encode(
-        ["address", "uint256", "int256"],
-        [demoSource.address, ethMarketId, withdrawableMargin.mul(-1)]
-      )
-    );
-  }
+  // if (withdrawableMargin.gt(0)) {
+  //   commands.push(Command.PERP_MODIFY_COLLATERAL);
+  //   inputs.push(
+  //     abiDecoder.encode(
+  //       ["address", "uint256", "int256"],
+  //       [demoSource.address, ethMarketId, withdrawableMargin.mul(-1)]
+  //     )
+  //   );
+  // }
 
   const fillPrice = await perpsMarket.fillPrice(
     ethMarketId,
