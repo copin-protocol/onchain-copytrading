@@ -1,7 +1,11 @@
 import { formatEther, parseEther } from "@ethersproject/units";
 import { ethers, network } from "hardhat";
 import { abi as copytradeAbi } from "../artifacts/contracts/CopytradeSNX.sol/CopytradeSNX.json";
-import { Command, SMART_COPYTRADE_ADDRESS } from "../utils/constants";
+import {
+  Command,
+  MARKET_IDS,
+  SMART_COPYTRADE_ADDRESS,
+} from "../utils/constants";
 import { CopinNetworkConfig } from "../utils/types/config";
 import perpsMarketAbi from "../utils/abis/perpsMarketAbi";
 import { calculateAcceptablePrice } from "../utils/perps";
@@ -9,16 +13,16 @@ import { getRelaySigner } from "../utils/relay";
 
 const abiDecoder = ethers.utils.defaultAbiCoder;
 
-const ethMarketId = 200;
-
 async function main() {
   const signer = getRelaySigner();
 
   const demoSource = {
     address: SMART_COPYTRADE_ADDRESS,
+    // address: "0x1aA25aBC0f3A29d017638ec9Ba02668921F91016",
   };
 
   const copytrade = new ethers.Contract(
+    // SMART_COPYTRADE_ADDRESS,
     SMART_COPYTRADE_ADDRESS,
     copytradeAbi,
     signer as any
@@ -27,21 +31,21 @@ async function main() {
   const perps = (network.config as CopinNetworkConfig).SNX_PERPS_MARKET;
   const perpsMarket = new ethers.Contract(perps, perpsMarketAbi, signer as any);
 
-  const indexPrice = await perpsMarket.indexPrice(ethMarketId);
+  const indexPrice = await perpsMarket.indexPrice(MARKET_IDS.ETH);
   const commands: Command[] = [];
   const inputs: string[] = [];
 
   // get account allocated for source trader address + market address
   const accountId = await copytrade.getAllocatedAccount(
     demoSource.address,
-    ethMarketId
+    MARKET_IDS.ETH
   );
 
   if (accountId.eq(0)) {
     throw Error("Position not found");
   }
 
-  const position = await perpsMarket.getOpenPosition(accountId, ethMarketId);
+  const position = await perpsMarket.getOpenPosition(accountId, MARKET_IDS.ETH);
   if (position.positionSize.eq(0)) {
     throw Error("No open position");
   }
@@ -62,7 +66,7 @@ async function main() {
   // }
 
   const fillPrice = await perpsMarket.fillPrice(
-    ethMarketId,
+    MARKET_IDS.ETH,
     sizeDelta,
     indexPrice
   );
@@ -78,7 +82,7 @@ async function main() {
       ["address", "uint256", "uint256", "address"],
       [
         demoSource.address,
-        ethMarketId,
+        MARKET_IDS.ETH,
         calculateAcceptablePrice(fillPrice, sizeDelta),
         demoSource.address,
       ]

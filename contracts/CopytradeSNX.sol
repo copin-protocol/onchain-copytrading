@@ -117,9 +117,9 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
         if (sizeDelta == 0) revert ZeroSizeDelta();
         uint128 accountId = _allocatedAccount(source, uint256(marketId));
         bytes32 key = keccak256(abi.encodePacked(source, uint256(marketId)));
-        uint256 keyAccountId = _keyAccounts[key];
-        if (keyAccountId == 0) _keyAccounts[key] = accountId;
+        _keyAccounts[key] = accountId;
         _placeOrder({
+            _source: source,
             _marketId: marketId,
             _accountId: accountId,
             _sizeDelta: sizeDelta,
@@ -141,6 +141,7 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
         }
         uint128 accountId = _allocatedAccount(source, uint256(marketId));
         _placeOrder({
+            _source: source,
             _marketId: marketId,
             _accountId: accountId,
             _sizeDelta: 0, // sizeDelta 0 = close position
@@ -149,18 +150,35 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
         });
     }
 
+    function _perpCancelOrder(bytes calldata _inputs) internal override {
+        address source;
+        uint128 marketId;
+        assembly {
+            source := calldataload(_inputs.offset)
+            marketId := calldataload(add(_inputs.offset, 0x20))
+        }
+        uint128 accountId = _allocatedAccount(source, uint256(marketId));
+        PERPS_MARKET.cancelOrder(accountId);
+    }
+
     function _perpClosePosition(
         uint128 _accountId,
         uint256 _market,
         uint256 _acceptablePrice
-    ) internal override {
-        _placeOrder({
-            _marketId: uint128(_market),
-            _accountId: _accountId,
-            _sizeDelta: 0, // sizeDelta 0 = close position
-            _acceptablePrice: _acceptablePrice,
-            _referrer: address(0)
-        });
+    )
+        internal
+        override
+        returns (IPerpsMarket.AsyncOrderData memory retOrder, uint256 fees)
+    {
+        return
+            _placeOrder({
+                _source: _accountOrders[_accountId].source,
+                _marketId: uint128(_market),
+                _accountId: _accountId,
+                _sizeDelta: 0, // sizeDelta 0 = close position
+                _acceptablePrice: _acceptablePrice,
+                _referrer: address(0)
+            });
     }
 
     function _perpWithdrawAllMargin(bytes calldata _inputs) internal override {
@@ -233,6 +251,7 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
             _modifyCollateral(accountId, _task.collateralDelta);
         }
         _placeOrder({
+            _source: _task.source,
             _marketId: uint128(_task.market),
             _accountId: accountId,
             _sizeDelta: int128(_task.sizeDelta),
@@ -270,6 +289,7 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
     }
 
     function _placeOrder(
+        address _source,
         uint128 _marketId,
         uint128 _accountId,
         int128 _sizeDelta,
@@ -311,7 +331,8 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
             acceptablePrice: _acceptablePrice,
             commitmentTime: block.timestamp,
             commitmentBlock: block.number,
-            fees: fees
+            fees: fees,
+            source: _source
         });
 
         _postOrder(uint256(_marketId), sizeDeltaUsd);
@@ -320,7 +341,13 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
     function _perpGetOpenPosition(
         uint128 _accountId,
         uint256 _market
-    ) internal view override returns (int256 size, int256 pnl, int256 funding) {
+    )
+        internal
+        view
+        override
+        returns (uint128 accountId, int256 size, int256 pnl, int256 funding)
+    {
+        accountId = _accountId;
         (pnl, funding, size) = IPerpsMarket(PERPS_MARKET).getOpenPosition(
             _accountId,
             uint128(_market)

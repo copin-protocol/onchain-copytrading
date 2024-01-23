@@ -19,6 +19,7 @@ async function main() {
 
   const demoSource = {
     address: SMART_COPYTRADE_ADDRESS,
+    // address: "0x1aA25aBC0f3A29d017638ec9Ba02668921F91016",
   };
 
   const copytrade = new ethers.Contract(
@@ -27,8 +28,8 @@ async function main() {
     signer as any
   );
 
-  const leverage = 2;
-  const amount = ethers.utils.parseEther("62");
+  const leverage = 8;
+  const amount = ethers.utils.parseEther("80");
   const isLong = true;
   const isIncrease = true;
   const sign = getTradeSign(isLong, isIncrease);

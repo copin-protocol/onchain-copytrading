@@ -12,10 +12,12 @@ async function main() {
   const signer = getRelaySigner();
 
   const demoSource = {
-    address: SMART_COPYTRADE_ADDRESS,
+    // address: SMART_COPYTRADE_ADDRESS,
+    address: "0x1aA25aBC0f3A29d017638ec9Ba02668921F91016",
   };
 
   const copytrade = new ethers.Contract(
+    // SMART_COPYTRADE_ADDRESS,
     SMART_COPYTRADE_ADDRESS,
     copytradeAbi,
     signer as any
@@ -29,6 +31,8 @@ async function main() {
     MARKET_IDS.ETH
   );
 
+  console.log("accountId", accountId.toString());
+
   const indexPrice = await perpsMarket.indexPrice(MARKET_IDS.ETH);
 
   console.log("indexPrice", ethers.utils.formatEther(indexPrice));
@@ -41,8 +45,18 @@ async function main() {
     }))
   );
 
-  // const order = await perpsMarket.getOrder(accountId);
-  // console.log("order", order);
+  const keyAccount = await copytrade.getKeyAccount(
+    demoSource.address,
+    MARKET_IDS.ETH
+  );
+
+  console.log("keyAccount", keyAccount.toString());
+
+  const order = await copytrade.getAccountOrder(
+    "170141183460469231731687303715884107098"
+  );
+  console.log("order", order);
+  console.log("market", order.market.toString());
 
   const availableMargin = await perpsMarket.getAvailableMargin(accountId);
   console.log("availableMargin", ethers.utils.formatEther(availableMargin));

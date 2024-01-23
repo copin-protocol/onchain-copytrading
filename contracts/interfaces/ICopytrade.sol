@@ -10,10 +10,11 @@ interface ICopytrade {
         PERP_MODIFY_COLLATERAL, //4
         PERP_PLACE_ORDER, //5
         PERP_CLOSE_ORDER, //6
-        PERP_WITHDRAW_ALL_MARGIN, //7
-        GELATO_CREATE_TASK, //8
-        GELATO_UPDATE_TASK, //9
-        GELETO_CANCEL_TASK //10
+        PERP_CANCEL_ORDER, //7
+        PERP_WITHDRAW_ALL_MARGIN, //8
+        GELATO_CREATE_TASK, //9
+        GELATO_UPDATE_TASK, //10
+        GELETO_CANCEL_TASK //11
     }
 
     enum TaskCommand {
@@ -37,6 +38,7 @@ interface ICopytrade {
         uint256 commitmentTime;
         uint256 commitmentBlock;
         uint256 fees;
+        address source;
     }
 
     struct Task {
@@ -93,7 +95,10 @@ interface ICopytrade {
     function getOpenPosition(
         address _source,
         uint256 _market
-    ) external view returns (int256 size, int256 pnl, int256 funding);
+    )
+        external
+        view
+        returns (uint128 accountId, int256 size, int256 pnl, int256 funding);
 
     function checker(
         uint256 _taskId

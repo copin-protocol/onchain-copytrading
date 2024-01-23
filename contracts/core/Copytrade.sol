@@ -8,6 +8,7 @@ import {IConfigs} from "../interfaces/IConfigs.sol";
 import {IEvents} from "../interfaces/IEvents.sol";
 import {ITaskCreator} from "../interfaces/ITaskCreator.sol";
 import {IERC20} from "../interfaces/token/IERC20.sol";
+import {IPerpsMarket} from "../interfaces/synthetix/IPerpsMarket.sol";
 import {Auth} from "../utils/Auth.sol";
 import {AutomateReady} from "../utils/gelato/AutomateReady.sol";
 import {Module, ModuleData, IAutomate} from "../utils/gelato/Types.sol";
@@ -60,8 +61,10 @@ abstract contract Copytrade is
     ) public view returns (uint128) {
         bytes32 key = keccak256(abi.encodePacked(_source, _market));
         uint128 accountId = _keyAccounts[key];
-        if (accountId != 0 && _accountOrders[accountId].market == _market)
-            return accountId;
+        Order memory order = _accountOrders[accountId];
+        if (
+            accountId != 0 && order.source == _source && order.market == _market
+        ) return accountId;
         for (uint i = 0; i < accountIds.length; i++) {
             uint128 iAccountId = accountIds[i];
             if (accountIdle(iAccountId)) return iAccountId;
@@ -72,10 +75,13 @@ abstract contract Copytrade is
     function getOpenPosition(
         address _source,
         uint256 _market
-    ) public view returns (int256 size, int256 pnl, int256 funding) {
+    )
+        public
+        view
+        returns (uint128 accountId, int256 size, int256 pnl, int256 funding)
+    {
         bytes32 key = keccak256(abi.encodePacked(_source, _market));
-        uint128 accountId = _keyAccounts[key];
-        return _perpGetOpenPosition(accountId, _market);
+        return _perpGetOpenPosition(_keyAccounts[key], _market);
     }
 
     function getOrder(
@@ -85,6 +91,12 @@ abstract contract Copytrade is
         bytes32 key = keccak256(abi.encodePacked(_source, _market));
         uint128 accountId = _keyAccounts[key];
         order = _accountOrders[accountId];
+    }
+
+    function getAccountOrder(
+        uint128 _accountId
+    ) public view returns (Order memory order) {
+        order = _accountOrders[_accountId];
     }
 
     function accountIdle(uint128 _accountId) public view returns (bool) {
@@ -144,9 +156,12 @@ abstract contract Copytrade is
         uint128 _accountId,
         uint256 _market,
         uint256 _acceptablePrice
-    ) external {
+    )
+        external
+        returns (IPerpsMarket.AsyncOrderData memory retOrder, uint256 fees)
+    {
         if (!isAuth(msg.sender)) revert Unauthorized();
-        _perpClosePosition(_accountId, _market, _acceptablePrice);
+        return _perpClosePosition(_accountId, _market, _acceptablePrice);
     }
 
     function execute(
@@ -263,6 +278,8 @@ abstract contract Copytrade is
                 _perpPlaceOrder(_inputs);
             } else if (_command == Command.PERP_CLOSE_ORDER) {
                 _perpCloseOrder(_inputs);
+            } else if (_command == Command.PERP_CANCEL_ORDER) {
+                _perpCancelOrder(_inputs);
             } else if (_command == Command.PERP_WITHDRAW_ALL_MARGIN) {
                 _perpWithdrawAllMargin(_inputs);
             } else if (_command == Command.GELATO_CREATE_TASK) {
@@ -321,7 +338,7 @@ abstract contract Copytrade is
                 }
                 _cancelGelatoTask(requestTaskId);
             }
-            if (commandIndex > 11) {
+            if (commandIndex > 12) {
                 revert InvalidCommandType(commandIndex);
             }
         }
@@ -410,7 +427,12 @@ abstract contract Copytrade is
     function _perpGetOpenPosition(
         uint128 _accountId,
         uint256 _market
-    ) internal view virtual returns (int256 size, int256 pnl, int256 funding) {}
+    )
+        internal
+        view
+        virtual
+        returns (uint128 accountId, int256 size, int256 pnl, int256 funding)
+    {}
 
     function _perpAccountIdle(
         uint128 _accountId
@@ -524,11 +546,17 @@ abstract contract Copytrade is
 
     function _perpCloseOrder(bytes calldata _inputs) internal virtual {}
 
+    function _perpCancelOrder(bytes calldata _inputs) internal virtual {}
+
     function _perpClosePosition(
         uint128 _accountId,
         uint256 _market,
         uint256 _acceptablePrice
-    ) internal virtual {}
+    )
+        internal
+        virtual
+        returns (IPerpsMarket.AsyncOrderData memory retOrder, uint256 fees)
+    {}
 
     function _perpWithdrawAllMargin(bytes calldata _inputs) internal virtual {}
 

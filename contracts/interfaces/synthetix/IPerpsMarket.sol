@@ -91,6 +91,12 @@ interface IPerpsMarket {
         OrderCommitmentRequest memory commitment
     ) external returns (AsyncOrderData memory retOrder, uint256 fees);
 
+    /**
+     * @notice Cancels an order when price exceeds the acceptable price. Uses the onchain benchmark price at commitment time.
+     * @param accountId Id of the account used for the trade.
+     */
+    function cancelOrder(uint128 accountId) external;
+
     /// @notice Simulates what the order fee would be for the given market with the specified size.
     /// @dev Note that this does not include the settlement reward fee, which is based on the strategy type used
     /// @param marketId id of the market.
