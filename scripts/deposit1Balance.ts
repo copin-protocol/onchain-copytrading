@@ -11,7 +11,7 @@ async function main() {
     wallet1 as any
   );
   const tx = await gelato1Balance.depositNative(
-    "0x99CF57079A9B79f6A9a824C55cc16EBa2033f004",
+    "0xE9D1E94E8A933b2fDcc8415D9D697e5070c4c421",
     {
       value: parseEther("0.05"),
     }

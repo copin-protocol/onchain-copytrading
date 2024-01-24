@@ -38,12 +38,19 @@ const config: HardhatUserConfig = {
         process.env.PRIVATE_KEY_3!,
       ],
       ...{
-        USD_ASSET: "0x4967d1987930b2CD183dAB4B6C40B8745DD2eba1",
+        // USD_ASSET: "0x4967d1987930b2CD183dAB4B6C40B8745DD2eba1",
+        // AUTOMATE: "0x2A6C106ae13B558BB9E2Ec64Bd2f1f7BEFF3A5E0",
+        // EXECUTOR: "0x70F5CB11f15C7e1632BAf03fa150044aC0453DF6",
+        // SNX_PERPS_MARKET: "0x75c43165ea38cB857C45216a37C5405A7656673c",
+        // SNX_SPOT_MARKET: "0x26f3EcFa0Aa924649cfd4b74C57637e910A983a4",
+        // SNX_SUSDC: "0x367fed42283febc9d8a6d78c5ab62f78b6022e27",
+        // SNX_SUSD: "0xa89163A087fe38022690C313b5D4BBF12574637f",
+        USD_ASSET: "0x69980C3296416820623b3e3b30703A74e2320bC8",
         AUTOMATE: "0x2A6C106ae13B558BB9E2Ec64Bd2f1f7BEFF3A5E0",
-        EXECUTOR: "0x70F5CB11f15C7e1632BAf03fa150044aC0453DF6",
-        SNX_PERPS_MARKET: "0x75c43165ea38cB857C45216a37C5405A7656673c",
-        SNX_SPOT_MARKET: "0x26f3EcFa0Aa924649cfd4b74C57637e910A983a4",
-        SNX_SUSDC: "0x367fed42283febc9d8a6d78c5ab62f78b6022e27",
+        EXECUTOR: "0xaC1c99F09A788c863334c364eB9474Ab2360AB18",
+        SNX_PERPS_MARKET: "0xE6C5f05C415126E6b81FCc3619f65Db2fCAd58D0",
+        SNX_SPOT_MARKET: "0xA4fE63F8ea9657990eA8E05Ebfa5C19a7D4d7337",
+        SNX_SUSDC: "0x434Aa3FDb11798EDaB506D4a5e48F70845a66219",
         SNX_SUSD: "0xa89163A087fe38022690C313b5D4BBF12574637f",
       },
     },
@@ -80,12 +87,20 @@ const config: HardhatUserConfig = {
       base: process.env.BASESCAN_API_KEY!,
     },
     customChains: [
+      // {
+      //   network: "base",
+      //   chainId: 84531,
+      //   urls: {
+      //     apiURL: "https://api-goerli.basescan.org/api",
+      //     browserURL: "https://goerli.basescan.org",
+      //   },
+      // },
       {
         network: "base",
-        chainId: 84531,
+        chainId: 84532,
         urls: {
-          apiURL: "https://api-goerli.basescan.org/api",
-          browserURL: "https://goerli.basescan.org",
+          apiURL: "https://api-sepolia.basescan.org/api",
+          browserURL: "https://sepolia.basescan.org",
         },
       },
       {

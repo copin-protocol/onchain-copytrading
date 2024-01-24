@@ -43,24 +43,24 @@ async function main() {
   // console.log("TaskCreator deployed to:", taskCreator.address);
   const taskCreator = { address: TASK_CREATOR_ADDRESS };
 
-  const Copytrade = await ethers.getContractFactory("CopytradeSNX");
-  const implementation = await Copytrade.deploy({
-    factory: factory.address,
-    events: events.address,
-    configs: configs.address,
-    usdAsset,
-    automate,
-    taskCreator: taskCreator.address,
-    perpsMarket,
-    spotMarket,
-    sUSDC,
-    sUSD,
-    ethMarketId: 100,
-  });
-  console.log("Copytrade Implementation deployed to:", implementation.address);
-  // const implementation = {
-  //   address: IMPLEMENTATION_ADDRESS,
-  // };
+  // const Copytrade = await ethers.getContractFactory("CopytradeSNX");
+  // const implementation = await Copytrade.deploy({
+  //   factory: factory.address,
+  //   events: events.address,
+  //   configs: configs.address,
+  //   usdAsset,
+  //   automate,
+  //   taskCreator: taskCreator.address,
+  //   perpsMarket,
+  //   spotMarket,
+  //   sUSDC,
+  //   sUSD,
+  //   ethMarketId: 100,
+  // });
+  // console.log("Copytrade Implementation deployed to:", implementation.address);
+  const implementation = {
+    address: IMPLEMENTATION_ADDRESS,
+  };
 
   await new Promise((resolve) =>
     setTimeout(() => {
@@ -74,24 +74,24 @@ async function main() {
 
   console.log("update", tx);
 
-  await run("verify:verify", {
-    address: implementation.address,
-    constructorArguments: [
-      {
-        factory: factory.address,
-        events: events.address,
-        configs: configs.address,
-        usdAsset,
-        automate,
-        taskCreator: taskCreator.address,
-        perpsMarket,
-        spotMarket,
-        sUSDC,
-        sUSD,
-        ethMarketId: 100,
-      },
-    ],
-  });
+  // await run("verify:verify", {
+  //   address: implementation.address,
+  //   constructorArguments: [
+  //     {
+  //       factory: factory.address,
+  //       events: events.address,
+  //       configs: configs.address,
+  //       usdAsset,
+  //       automate,
+  //       taskCreator: taskCreator.address,
+  //       perpsMarket,
+  //       spotMarket,
+  //       sUSDC,
+  //       sUSD,
+  //       ethMarketId: 100,
+  //     },
+  //   ],
+  // });
 }
 
 main();
