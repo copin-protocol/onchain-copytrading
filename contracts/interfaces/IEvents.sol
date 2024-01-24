@@ -49,14 +49,16 @@ interface IEvents {
 
     function emitChargeProtocolFee(
         address receiver,
-        uint256 sizeUsd,
+        uint256 sizeDelta,
+        uint256 price,
         uint256 feeUsd
     ) external;
 
     event ChargeProtocolFee(
         address indexed receiver,
         address indexed account,
-        uint256 sizeUsd,
+        uint256 sizeDelta,
+        uint256 price,
         uint256 feeUsd
     );
 

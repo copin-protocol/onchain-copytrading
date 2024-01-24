@@ -41,6 +41,13 @@ interface ICopytrade {
         address source;
     }
 
+    struct Position {
+        uint256 lastSize;
+        uint256 lastSizeDelta;
+        uint256 lastPrice;
+        uint256 lastFees;
+    }
+
     struct Task {
         bytes32 gelatoTaskId;
         TaskCommand command;
@@ -83,9 +90,13 @@ interface ICopytrade {
 
     function lockedFund() external view returns (uint256);
 
+    function lockedFundD18() external view returns (uint256);
+
     function executorUsdFee(uint256 _fee) external view returns (uint256);
 
     function availableFund() external view returns (uint256);
+
+    function availableFundD18() external view returns (uint256);
 
     function getAllocatedAccount(
         address _source,

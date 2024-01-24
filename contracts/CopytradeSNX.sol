@@ -261,7 +261,7 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
     }
 
     function _modifyCollateral(uint128 accountId, int256 amount) internal {
-        uint256 usdcAmount = _toUsdAsset(_abs(amount));
+        uint256 usdcAmount = _unitToUsd(_abs(amount));
         if (amount > 0) {
             USD_ASSET.approve(address(SPOT_MARKET), usdcAmount);
             SPOT_MARKET.wrap(1, usdcAmount, uint256(amount)); // USDC -> sUSDC
@@ -299,17 +299,25 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
         internal
         returns (IPerpsMarket.AsyncOrderData memory retOrder, uint256 fees)
     {
+        (, , int128 lastSize) = PERPS_MARKET.getOpenPosition(
+            _accountId,
+            _marketId
+        );
         // close
         if (_sizeDelta == 0) {
-            (, , int128 lastSize) = PERPS_MARKET.getOpenPosition(
-                _accountId,
-                _marketId
-            );
             _sizeDelta = lastSize * -1;
         }
 
-        uint256 sizeDeltaUsd = _tokenToUsd(_abs(_sizeDelta), _marketId);
-        _preOrder(uint256(_marketId), sizeDeltaUsd);
+        uint256 price = _marketIndexPrice(_marketId);
+        bool isIncrease = lastSize == 0 || _isSameSign(lastSize, _sizeDelta);
+
+        // _preOrder({
+        //     _accountId: _accountId,
+        //     _lastSize: lastSize,
+        //     _sizeDelta: _sizeDelta,
+        //     _price: price,
+        //     _isIncrease: isIncrease
+        // });
 
         (retOrder, fees) = PERPS_MARKET.commitOrder(
             IPerpsMarket.OrderCommitmentRequest({
@@ -335,7 +343,13 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
             source: _source
         });
 
-        _postOrder(uint256(_marketId), sizeDeltaUsd);
+        _postOrder({
+            _accountId: _accountId,
+            _lastSize: _abs(lastSize),
+            _sizeDelta: _abs(_sizeDelta),
+            _price: price,
+            _isIncrease: isIncrease
+        });
     }
 
     function _perpGetOpenPosition(
@@ -384,7 +398,7 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
     ) internal view returns (uint256) {
         // ETH: 100
         return
-            _toUsdAsset(
+            _unitToUsd(
                 (_tokenAmount * _marketIndexPrice(_marketId)) / 10 ** 18
             );
     }

@@ -56,13 +56,15 @@ contract Events is IEvents {
 
     function emitChargeProtocolFee(
         address receiver,
-        uint256 sizeUsd,
+        uint256 sizeDelta,
+        uint256 price,
         uint256 feeUsd
     ) external override onlyCopytrades {
         emit ChargeProtocolFee({
             receiver: receiver,
             account: msg.sender,
-            sizeUsd: sizeUsd,
+            sizeDelta: sizeDelta,
+            price: price,
             feeUsd: feeUsd
         });
     }

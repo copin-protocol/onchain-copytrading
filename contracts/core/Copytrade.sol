@@ -36,6 +36,7 @@ abstract contract Copytrade is
     mapping(uint256 => Task) internal _tasks;
     mapping(bytes32 => uint128) internal _keyAccounts;
     mapping(uint128 => Order) internal _accountOrders;
+    mapping(uint128 => Position) internal _accountPositions;
 
     constructor(
         CopytradeConstructorParams memory _params
@@ -53,6 +54,14 @@ abstract contract Copytrade is
 
     function availableFund() public view override returns (uint256) {
         return USD_ASSET.balanceOf(address(this)) - lockedFund;
+    }
+
+    function availableFundD18() public view override returns (uint256) {
+        return _usdToUnit(availableFund());
+    }
+
+    function lockedFundD18() public view override returns (uint256) {
+        return _usdToUnit(lockedFund);
     }
 
     function getAllocatedAccount(
@@ -217,7 +226,7 @@ abstract contract Copytrade is
         /// @dev origin true => amount as fund asset decimals
         uint256 _fundOut = origin
             ? _abs(_amountOut)
-            : _toUsdAsset(_abs(_amountOut));
+            : _unitToUsd(_abs(_amountOut));
         if (_fundOut > availableFund()) {
             revert InsufficientAvailableFund(availableFund(), _fundOut);
         }
@@ -355,9 +364,14 @@ abstract contract Copytrade is
         }
     }
 
-    function _toUsdAsset(uint256 _amount) internal view returns (uint256) {
+    function _unitToUsd(uint256 _amount) internal view returns (uint256) {
         /// @dev convert to fund asset decimals
         return (_amount * 10 ** USD_ASSET.decimals()) / 10 ** 18;
+    }
+
+    function _usdToUnit(uint256 _amount) internal view returns (uint256) {
+        /// @dev convert to fund asset decimals
+        return (_amount * 10 ** 18) / 10 ** USD_ASSET.decimals();
     }
 
     function _modifyFund(int256 _amount, address _msgSender) internal {
@@ -404,24 +418,70 @@ abstract contract Copytrade is
         return fee;
     }
 
-    function _chargeProtocolFee(uint256 _sizeUsd, uint256 _feeUsd) internal {
-        if (_feeUsd > availableFund()) {
-            revert InsufficientAvailableFund(availableFund(), _feeUsd);
-        }
+    function _lockFund(int256 _amount, bool origin) internal {
+        _sufficientFund(_amount, origin);
+        lockedFund += origin ? _abs(_amount) : _unitToUsd(_abs(_amount));
+    }
+
+    function _chargeProtocolFee(
+        uint256 _sizeDelta,
+        uint256 _price,
+        uint256 _feeUsd
+    ) internal {
         address feeReceiver = CONFIGS.feeReceiver();
         USD_ASSET.transfer(feeReceiver, _feeUsd);
         EVENTS.emitChargeProtocolFee({
             receiver: feeReceiver,
-            sizeUsd: _sizeUsd,
+            sizeDelta: _sizeDelta,
+            price: _price,
             feeUsd: _feeUsd
         });
     }
 
-    function _preOrder(uint256 _market, uint256 _sizeDeltaUsd) internal {}
+    function _preOrder(
+        uint128 _accountId,
+        uint256 _lastSize,
+        uint256 _sizeDelta,
+        uint256 _price,
+        bool _isIncrease
+    ) internal {}
 
-    function _postOrder(uint256 _market, uint256 _sizeDeltaUsd) internal {
-        uint256 feeUsd = _protocolFee(_sizeDeltaUsd);
-        _chargeProtocolFee(_sizeDeltaUsd, feeUsd);
+    function _postOrder(
+        uint128 _accountId,
+        uint256 _lastSize,
+        uint256 _sizeDelta,
+        uint256 _price,
+        bool _isIncrease
+    ) internal {
+        Position memory position = _accountPositions[_accountId];
+        uint256 delta = _lastSize > position.lastSize
+            ? _lastSize - position.lastSize
+            : 0;
+
+        if (delta > 0) {
+            if (delta > position.lastSizeDelta) delta = position.lastSizeDelta;
+            uint256 chargeFees = _protocolFee(
+                (delta * position.lastPrice * 2) / 10 ** 18
+            );
+            if (chargeFees > position.lastFees) chargeFees = position.lastFees;
+            lockedFund -= _unitToUsd(position.lastFees);
+            _chargeProtocolFee(
+                delta,
+                position.lastPrice,
+                _unitToUsd(chargeFees)
+            );
+        }
+        uint256 fees = 0;
+        if (_isIncrease) {
+            fees = _protocolFee((_sizeDelta * _price * 2) / 10 ** 18);
+            _lockFund(int256(fees), false);
+        }
+        _accountPositions[_accountId] = Position({
+            lastSize: _lastSize,
+            lastSizeDelta: _sizeDelta,
+            lastPrice: _price,
+            lastFees: fees
+        });
     }
 
     function _perpGetOpenPosition(
@@ -454,8 +514,7 @@ abstract contract Copytrade is
     ) internal {
         if (_sizeDelta == 0) revert ZeroSizeDelta();
         if (_collateralDelta > 0) {
-            _sufficientFund(_collateralDelta, false);
-            lockedFund += _toUsdAsset(_abs(_collateralDelta));
+            _lockFund(_collateralDelta, false);
         }
 
         ModuleData memory moduleData = ModuleData({
