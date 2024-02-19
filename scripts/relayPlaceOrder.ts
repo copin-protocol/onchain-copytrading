@@ -37,13 +37,18 @@ async function main() {
   const perps = (network.config as CopinNetworkConfig).SNX_PERPS_MARKET;
   const perpsMarket = new ethers.Contract(perps, perpsMarketAbi, signer as any);
 
+  console.log("perps", perps);
+  console.log("signer", await signer.getAddress());
+
   // get account allocated for source trader address + market address
   const accountId = await copytrade.getAllocatedAccount(
     demoSource.address,
     MARKET_IDS.ETH
   );
   console.log("accountId", accountId.toString());
-  const indexPrice = await perpsMarket.indexPrice(MARKET_IDS.ETH);
+  const indexPrice = await perpsMarket.indexPrice("100");
+  console.log(indexPrice.toString());
+  return;
   const sizeDelta = amount
     .mul(leverage)
     .mul(BigNumber.from(10).pow(18))
@@ -136,7 +141,11 @@ async function main() {
       if (!modifyAmount.eq(0)) {
         if (modifyAmount.gt(0)) {
           // TODO handle decimals
-          const availableFund = await copytrade.availableFund();
+          const availableFund = (await copytrade.availableFund())
+            .mul(ONE)
+            .div(BigNumber.from(10).pow(6));
+
+          console.log(availableFund.toString());
           const idleMargin = await copytrade.getPerpIdleMargin();
           if (availableFund.add(idleMargin).lt(modifyAmount)) {
             throw Error(

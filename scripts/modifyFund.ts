@@ -6,7 +6,7 @@ import { Command, SMART_COPYTRADE_ADDRESS } from "../utils/constants";
 import { CopinNetworkConfig } from "../utils/types/config";
 // const { formatUnits } = require("ethers/lib/utils");
 
-export const FUND = ethers.utils.parseEther("100");
+export const FUND = ethers.utils.parseUnits("200", 6);
 
 const abiDecoder = ethers.utils.defaultAbiCoder;
 
@@ -22,8 +22,8 @@ async function main() {
 
   const fund = new ethers.Contract(usdAsset, mockERC20, wallet2 as any);
 
-  const approvedTx = await fund.approve(copytrade.address, FUND);
-  console.log("approvedTx", approvedTx);
+  // const approvedTx = await fund.approve(copytrade.address, FUND);
+  // console.log("approvedTx", approvedTx);
 
   const commands = [Command.OWNER_MODIFY_FUND];
   const inputs = [abiDecoder.encode(["int256"], [FUND])];

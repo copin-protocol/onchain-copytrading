@@ -26,33 +26,40 @@ async function main() {
     address: IMPLEMENTATION_ADDRESS,
   };
 
-  // await run("verify:verify", {
-  //   address: implementation.address,
-  //   constructorArguments: [
-  //     {
-  //       factory: factory.address,
-  //       events: events.address,
-  //       configs: configs.address,
-  //       usdAsset,
-  //       automate,
-  //       taskCreator: taskCreator.address,
-  //       perpsMarket,
-  //       spotMarket,
-  //       sUSDC,
-  //       sUSD,
-  //       ethMarketId: 100,
-  //     },
-  //   ],
-  // });
-
   await run("verify:verify", {
     address: factory.address,
     constructorArguments: [wallet.address],
   });
-  // await run("verify:verify", {
-  //   address: events.address,
-  //   constructorArguments: [factory.address],
-  // });
+  await run("verify:verify", {
+    address: events.address,
+    constructorArguments: [factory.address],
+  });
+  await run("verify:verify", {
+    address: configs.address,
+    constructorArguments: [wallet.address],
+  });
+  await run("verify:verify", {
+    address: taskCreator.address,
+    constructorArguments: [factory.address, automate],
+  });
+  await run("verify:verify", {
+    address: implementation.address,
+    constructorArguments: [
+      {
+        factory: factory.address,
+        events: events.address,
+        configs: configs.address,
+        usdAsset,
+        automate,
+        taskCreator: taskCreator.address,
+        perpsMarket,
+        spotMarket,
+        sUSDC,
+        sUSD,
+        ethMarketId: 100,
+      },
+    ],
+  });
 }
 
 main();
