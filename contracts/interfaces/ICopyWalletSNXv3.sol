@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
 
-interface ICopytradeSNX {
+interface ICopyWalletSNXv3 {
+
+    error NoAccountAvailable();
+    error AccountMismatch();
+    error AccountUnavailable();
+    error KeyWrong();
     error InvalidPrice();
 
     struct ConstructorParams {

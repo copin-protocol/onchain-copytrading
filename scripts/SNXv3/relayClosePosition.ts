@@ -1,22 +1,22 @@
 import { formatEther, parseEther } from "@ethersproject/units";
 import { ethers, network } from "hardhat";
-import { abi as copytradeAbi } from "../artifacts/contracts/CopytradeSNX.sol/CopytradeSNX.json";
-import { MARKET_IDS, SMART_COPYTRADE_ADDRESS } from "../utils/constants";
-import { CopinNetworkConfig } from "../utils/types/config";
-import perpsMarketAbi from "../utils/abis/perpsMarketAbi";
-import { calculateAcceptablePrice } from "../utils/perps";
-import { getRelaySigner } from "../utils/relay";
+import { abi as copyWalletAbi } from "../../artifacts/contracts/CopyWalletSNXv3.sol/CopyWalletSNXv3.json";
+import { MARKET_IDS, SMART_WALLET_ADDRESS } from "../../utils/constants";
+import { SNXv3NetworkConfig } from "../../utils/types/config";
+import perpsMarketAbi from "../../utils/abis/perpsMarketAbi";
+import { calculateAcceptablePrice } from "../../utils/perps";
+import { getRelaySigner } from "../../utils/relay";
 
 async function main() {
   const signer = getRelaySigner();
 
-  const copytrade = new ethers.Contract(
-    SMART_COPYTRADE_ADDRESS,
-    copytradeAbi,
+  const copyWallet = new ethers.Contract(
+    SMART_WALLET_ADDRESS,
+    copyWalletAbi,
     signer as any
   );
 
-  const perps = (network.config as CopinNetworkConfig).SNX_PERPS_MARKET;
+  const perps = (network.config as SNXv3NetworkConfig).SNX_PERPS_MARKET;
   const perpsMarket = new ethers.Contract(perps, perpsMarketAbi, signer as any);
 
   const indexPrice = await perpsMarket.indexPrice(MARKET_IDS.ETH);
@@ -40,7 +40,7 @@ async function main() {
   console.log("fillPrice", formatEther(fillPrice));
   console.log("sizeDelta", formatEther(sizeDelta));
 
-  const tx = await copytrade.closePosition(
+  const tx = await copyWallet.closePosition(
     accountId,
     MARKET_IDS.ETH,
     calculateAcceptablePrice(fillPrice, sizeDelta)

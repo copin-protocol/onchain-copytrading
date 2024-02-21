@@ -1,27 +1,30 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
 
-import {ICopytrade} from "./interfaces/ICopytrade.sol";
+import {ICopyWallet} from "./interfaces/ICopyWallet.sol";
 import {IConfigs} from "./interfaces/IConfigs.sol";
-import {ICopytradeSNX} from "./interfaces/ICopytradeSNX.sol";
+import {ICopyWalletSNXv3} from "./interfaces/ICopyWalletSNXv3.sol";
 import {IPerpsMarket} from "./interfaces/synthetix/IPerpsMarket.sol";
 import {ISpotMarket} from "./interfaces/synthetix/ISpotMarket.sol";
 import {IERC20} from "./interfaces/token/IERC20.sol";
-import {Copytrade} from "./core/Copytrade.sol";
+import {CopyWallet} from "./core/CopyWallet.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 
-contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
+contract CopyWalletSNXv3 is CopyWallet, ICopyWalletSNXv3, ERC721Holder {
     IPerpsMarket internal immutable PERPS_MARKET;
     ISpotMarket internal immutable SPOT_MARKET;
     IERC20 internal immutable SUSDC;
     IERC20 internal immutable SUSD;
     uint128 internal immutable ETH_MARKET_ID;
+    uint128[] public accountIds;
+    
+    mapping(bytes32 => uint128) internal _keyAccounts;
 
     constructor(
         ConstructorParams memory _params
     )
-        Copytrade(
-            ICopytrade.CopytradeConstructorParams({
+        CopyWallet(
+            ICopyWallet.CopyWalletConstructorParams({
                 factory: _params.factory,
                 events: _params.events,
                 configs: _params.configs,
@@ -36,6 +39,18 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
         SUSDC = IERC20(_params.sUSDC);
         SUSD = IERC20(_params.sUSD);
         ETH_MARKET_ID = _params.ethMarketId;
+    }
+
+    function closePosition(
+        uint128 _accountId,
+        uint256 _market,
+        uint256 _acceptablePrice
+    )
+        external
+        returns (IPerpsMarket.AsyncOrderData memory retOrder, uint256 fees)
+    {
+        if (!isAuth(msg.sender)) revert Unauthorized();
+        return _perpClosePosition(_accountId, _market, _acceptablePrice);
     }
 
     function executorUsdFee(
@@ -58,6 +73,79 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
         return PERPS_MARKET.isAuthorized(accountId, permission, address(this));
     }
 
+    function availableFundD18() public view override returns (uint256) {
+        return _usdToD18(availableFund());
+    }
+
+    function lockedFundD18() public view override returns (uint256) {
+        return _usdToD18(lockedFund);
+    }
+
+        function getAccountOrder(
+        uint128 _accountId
+    ) public view returns (Order memory order) {
+        order = _orders[uint256(_accountId)];
+    }
+
+    function accountIdle(uint128 _accountId) public view returns (bool) {
+        return _perpAccountIdle(_accountId);
+    }
+
+    function accountIdleByIndex(uint256 _index) public view returns (bool) {
+        uint128 accountId = accountIds[_index];
+        return accountIdle(accountId);
+    }
+
+    function numOfAccounts() external view returns (uint256) {
+        return accountIds.length;
+    }
+
+    function getKeyAccount(
+        address _source,
+        uint256 _market
+    ) external view returns (uint128) {
+        bytes32 key = keccak256(abi.encodePacked(_source, _market));
+        return _keyAccounts[key];
+    }
+
+    function getAllocatedAccount(
+        address _source,
+        uint256 _market
+    ) public view returns (uint128) {
+        bytes32 key = keccak256(abi.encodePacked(_source, _market));
+        uint128 accountId = _keyAccounts[key];
+        Order memory order = _orders[uint256(accountId)];
+        if (
+            accountId != 0 && order.source == _source && order.market == _market
+        ) return accountId;
+        for (uint i = 0; i < accountIds.length; i++) {
+            uint128 iAccountId = accountIds[i];
+            if (accountIdle(iAccountId)) return iAccountId;
+        }
+        return 0;
+    }
+
+    function getOpenPosition(
+        address _source,
+        uint256 _market
+    )
+        public
+        view
+        returns (uint128 accountId, int256 size, int256 pnl, int256 funding)
+    {
+        bytes32 key = keccak256(abi.encodePacked(_source, _market));
+        return _perpGetOpenPosition(_keyAccounts[key], _market);
+    }
+
+    function getOrder(
+        address _source,
+        uint256 _market
+    ) public view returns (Order memory order) {
+        bytes32 key = keccak256(abi.encodePacked(_source, _market));
+        uint128 accountId = _keyAccounts[key];
+        order = _orders[uint256(accountId)];
+    }
+
     function getPerpIdleMargin() external view returns (int256 margin) {
         for (uint i = 0; i < accountIds.length; i++) {
             uint128 accountId = accountIds[i];
@@ -72,6 +160,14 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
             uint128 accountId = accountIds[i];
             margin += PERPS_MARKET.getAvailableMargin(accountId);
         }
+    }
+
+    function _allocatedAccount(
+        address _source,
+        uint256 _market
+    ) internal view returns (uint128 accountId) {
+        accountId = getAllocatedAccount(_source, _market);
+        if (accountId == 0) revert NoAccountAvailable();
     }
 
     function _perpInit() internal override {
@@ -167,12 +263,11 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
         uint256 _acceptablePrice
     )
         internal
-        override
         returns (IPerpsMarket.AsyncOrderData memory retOrder, uint256 fees)
     {
         return
             _placeOrder({
-                _source: _accountOrders[_accountId].source,
+                _source: _orders[uint256(_accountId)].source,
                 _marketId: uint128(_market),
                 _accountId: _accountId,
                 _sizeDelta: 0, // sizeDelta 0 = close position
@@ -261,7 +356,7 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
     }
 
     function _modifyCollateral(uint128 accountId, int256 amount) internal {
-        uint256 usdcAmount = _unitToUsd(_abs(amount));
+        uint256 usdcAmount = _d18ToUsd(_abs(amount));
         if (amount > 0) {
             USD_ASSET.approve(address(SPOT_MARKET), usdcAmount);
             SPOT_MARKET.wrap(1, usdcAmount, uint256(amount)); // USDC -> sUSDC
@@ -333,7 +428,7 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
             })
         );
 
-        _accountOrders[_accountId] = Order({
+        _orders[uint256(_accountId)] = Order({
             market: uint256(_marketId),
             sizeDelta: int256(_sizeDelta),
             acceptablePrice: _acceptablePrice,
@@ -344,7 +439,7 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
         });
 
         _postOrder({
-            _accountId: _accountId,
+            _id: uint256(_accountId),
             _lastSize: _abs(lastSize),
             _sizeDelta: _abs(_sizeDelta),
             _price: price,
@@ -358,7 +453,6 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
     )
         internal
         view
-        override
         returns (uint128 accountId, int256 size, int256 pnl, int256 funding)
     {
         accountId = _accountId;
@@ -370,8 +464,8 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
 
     function _perpAccountIdle(
         uint128 _accountId
-    ) internal view override returns (bool) {
-        Order memory order = _accountOrders[_accountId];
+    ) internal view returns (bool) {
+        Order memory order = _orders[uint256(_accountId)];
         if (order.market == 0) return true;
         (, , int128 size) = IPerpsMarket(PERPS_MARKET).getOpenPosition(
             _accountId,
@@ -398,7 +492,7 @@ contract CopytradeSNX is Copytrade, ICopytradeSNX, ERC721Holder {
     ) internal view returns (uint256) {
         // ETH: 100
         return
-            _unitToUsd(
+            _d18ToUsd(
                 (_tokenAmount * _marketIndexPrice(_marketId)) / 10 ** 18
             );
     }

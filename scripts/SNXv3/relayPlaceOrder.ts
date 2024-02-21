@@ -1,16 +1,16 @@
 import { formatEther, parseEther } from "@ethersproject/units";
 import { ethers, network } from "hardhat";
-import { abi as copytradeAbi } from "../artifacts/contracts/CopytradeSNX.sol/CopytradeSNX.json";
+import { abi as copyWalletAbi } from "../../artifacts/contracts/CopyWalletSNXv3.sol/CopyWalletSNXv3.json";
 import {
   Command,
   MARKET_IDS,
-  SMART_COPYTRADE_ADDRESS,
-} from "../utils/constants";
-import { CopinNetworkConfig } from "../utils/types/config";
-import perpsMarketAbi from "../utils/abis/perpsMarketAbi";
+  SMART_WALLET_ADDRESS,
+} from "../../utils/constants";
+import { SNXv3NetworkConfig } from "../../utils/types/config";
+import perpsMarketAbi from "../../utils/abis/perpsMarketAbi";
 import { BigNumber } from "ethers";
-import { calculateAcceptablePrice, getTradeSign } from "../utils/perps";
-import { getRelaySigner } from "../utils/relay";
+import { calculateAcceptablePrice, getTradeSign } from "../../utils/perps";
+import { getRelaySigner } from "../../utils/relay";
 
 const abiDecoder = ethers.utils.defaultAbiCoder;
 
@@ -18,13 +18,13 @@ async function main() {
   const signer = getRelaySigner();
 
   const demoSource = {
-    address: SMART_COPYTRADE_ADDRESS,
+    address: SMART_WALLET_ADDRESS,
     // address: "0x1aA25aBC0f3A29d017638ec9Ba02668921F91016",
   };
 
-  const copytrade = new ethers.Contract(
-    SMART_COPYTRADE_ADDRESS,
-    copytradeAbi,
+  const copyWallet = new ethers.Contract(
+    SMART_WALLET_ADDRESS,
+    copyWalletAbi,
     signer as any
   );
 
@@ -34,14 +34,14 @@ async function main() {
   const isIncrease = true;
   const sign = getTradeSign(isLong, isIncrease);
 
-  const perps = (network.config as CopinNetworkConfig).SNX_PERPS_MARKET;
+  const perps = (network.config as SNXv3NetworkConfig).SNX_PERPS_MARKET;
   const perpsMarket = new ethers.Contract(perps, perpsMarketAbi, signer as any);
 
   console.log("perps", perps);
   console.log("signer", await signer.getAddress());
 
   // get account allocated for source trader address + market address
-  const accountId = await copytrade.getAllocatedAccount(
+  const accountId = await copyWallet.getAllocatedAccount(
     demoSource.address,
     MARKET_IDS.ETH
   );
@@ -141,15 +141,15 @@ async function main() {
       if (!modifyAmount.eq(0)) {
         if (modifyAmount.gt(0)) {
           // TODO handle decimals
-          const availableFund = (await copytrade.availableFund())
+          const availableFund = (await copyWallet.availableFund())
             .mul(ONE)
             .div(BigNumber.from(10).pow(6));
 
           console.log(availableFund.toString());
-          const idleMargin = await copytrade.getPerpIdleMargin();
+          const idleMargin = await copyWallet.getPerpIdleMargin();
           if (availableFund.add(idleMargin).lt(modifyAmount)) {
             throw Error(
-              "The copytrade fund is insufficient for executing the order"
+              "The copyWallet fund is insufficient for executing the order"
             );
           } else if (availableFund.lt(modifyAmount)) {
             commands.push(Command.PERP_WITHDRAW_ALL_MARGIN);
@@ -195,8 +195,8 @@ async function main() {
   );
 
   console.log("commands", commands);
-  const estimation = await copytrade.estimateGas.execute(commands, inputs);
-  const tx = await copytrade.execute(commands, inputs, {
+  const estimation = await copyWallet.estimateGas.execute(commands, inputs);
+  const tx = await copyWallet.execute(commands, inputs, {
     gasLimit: estimation.mul(105).div(100),
   });
   console.log("tx", tx);

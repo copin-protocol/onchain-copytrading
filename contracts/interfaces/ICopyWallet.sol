@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
 
-interface ICopytrade {
+interface ICopyWallet {
     enum Command {
         OWNER_MODIFY_FUND, //0
         OWNER_WITHDRAW_ETH, //1
@@ -22,7 +22,7 @@ interface ICopytrade {
         LIMIT_ORDER //1
     }
 
-    struct CopytradeConstructorParams {
+    struct CopyWalletConstructorParams {
         address factory;
         address events;
         address configs;
@@ -73,16 +73,6 @@ interface ICopytrade {
     error NoOrderFound();
 
     error NoTaskFound();
-
-    error NoAccountAvailable();
-
-    error AccountMismatch();
-
-    error AccountUnavailable();
-
-    error KeyWrong();
-
-    error FeeNotYetReleased();
 
     error CannotExecuteTask(uint256 taskId, address executor);
 

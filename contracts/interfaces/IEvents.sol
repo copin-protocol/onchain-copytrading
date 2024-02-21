@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
 
-import {ICopytrade} from "./ICopytrade.sol";
+import {ICopyWallet} from "./ICopyWallet.sol";
 
 interface IEvents {
-    error OnlyCopytrades();
+    error OnlyCopyWallets();
 
     function factory() external view returns (address);
 
@@ -42,7 +42,7 @@ interface IEvents {
     event ChargeExecutorFee(
         address indexed executor,
         address indexed receiver,
-        address indexed account,
+        address indexed copyWallet,
         uint256 fee,
         uint256 feeUsd
     );
@@ -56,7 +56,7 @@ interface IEvents {
 
     event ChargeProtocolFee(
         address indexed receiver,
-        address indexed account,
+        address indexed copyWallet,
         uint256 sizeDelta,
         uint256 price,
         uint256 feeUsd
@@ -65,7 +65,7 @@ interface IEvents {
     function emitCreateGelatoTask(
         uint256 taskId,
         bytes32 gelatoTaskId,
-        ICopytrade.TaskCommand command,
+        ICopyWallet.TaskCommand command,
         address source,
         uint256 market,
         int256 collateralDelta,
@@ -76,10 +76,10 @@ interface IEvents {
     ) external;
 
     event CreateGelatoTask(
-        address indexed copytrade,
+        address indexed copyWallet,
         uint256 indexed taskId,
         bytes32 indexed gelatoTaskId,
-        ICopytrade.TaskCommand command,
+        ICopyWallet.TaskCommand command,
         address source,
         uint256 market,
         int256 collateralDelta,
@@ -99,7 +99,7 @@ interface IEvents {
     ) external;
 
     event UpdateGelatoTask(
-        address indexed copytrade,
+        address indexed copyWallet,
         uint256 indexed taskId,
         bytes32 indexed gelatoTaskId,
         int256 collateralDelta,
@@ -115,7 +115,7 @@ interface IEvents {
     ) external;
 
     event CancelGelatoTask(
-        address indexed copytrade,
+        address indexed copyWallet,
         uint256 indexed taskId,
         bytes32 indexed gelatoTaskId,
         bytes32 reason

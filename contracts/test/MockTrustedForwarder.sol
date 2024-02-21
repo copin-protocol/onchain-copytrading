@@ -14,11 +14,11 @@ contract MockTrustedForwarder {
     }
 
     function triggerExecute(
-        address smartCopytrade,
+        address smartCopyWallet,
         address user,
         bytes calldata data
     ) external {
-        smartCopytrade.revertingContractCall(
+        smartCopyWallet.revertingContractCall(
             _encodeERC2771Context(data, user),
             "GelatoRelay1BalanceERC2771.sponsoredCallERC2771:"
         );

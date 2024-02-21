@@ -2,7 +2,7 @@
 pragma solidity 0.8.18;
 
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {ICopytrade} from "../interfaces/ICopytrade.sol";
+import {ICopyWallet} from "../interfaces/ICopyWallet.sol";
 import {IFactory} from "../interfaces/IFactory.sol";
 import {IConfigs} from "../interfaces/IConfigs.sol";
 import {IEvents} from "../interfaces/IEvents.sol";
@@ -13,8 +13,8 @@ import {Auth} from "../utils/Auth.sol";
 import {AutomateReady} from "../utils/gelato/AutomateReady.sol";
 import {Module, ModuleData, IAutomate} from "../utils/gelato/Types.sol";
 
-abstract contract Copytrade is
-    ICopytrade,
+abstract contract CopyWallet is
+    ICopyWallet,
     Auth,
     AutomateReady,
     ReentrancyGuard
@@ -31,15 +31,13 @@ abstract contract Copytrade is
     address public executor;
     uint256 public lockedFund;
     uint256 public taskId;
-    uint128[] public accountIds;
 
     mapping(uint256 => Task) internal _tasks;
-    mapping(bytes32 => uint128) internal _keyAccounts;
-    mapping(uint128 => Order) internal _accountOrders;
-    mapping(uint128 => Position) internal _accountPositions;
+    mapping(uint256 => Order) internal _orders;
+    mapping(uint256 => Position) internal _positions;
 
     constructor(
-        CopytradeConstructorParams memory _params
+        CopyWalletConstructorParams memory _params
     ) Auth(address(0)) AutomateReady(_params.automate, _params.taskCreator) {
         FACTORY = IFactory(_params.factory);
         EVENTS = IEvents(_params.events);
@@ -54,79 +52,6 @@ abstract contract Copytrade is
 
     function availableFund() public view override returns (uint256) {
         return USD_ASSET.balanceOf(address(this)) - lockedFund;
-    }
-
-    function availableFundD18() public view override returns (uint256) {
-        return _usdToUnit(availableFund());
-    }
-
-    function lockedFundD18() public view override returns (uint256) {
-        return _usdToUnit(lockedFund);
-    }
-
-    function getAllocatedAccount(
-        address _source,
-        uint256 _market
-    ) public view returns (uint128) {
-        bytes32 key = keccak256(abi.encodePacked(_source, _market));
-        uint128 accountId = _keyAccounts[key];
-        Order memory order = _accountOrders[accountId];
-        if (
-            accountId != 0 && order.source == _source && order.market == _market
-        ) return accountId;
-        for (uint i = 0; i < accountIds.length; i++) {
-            uint128 iAccountId = accountIds[i];
-            if (accountIdle(iAccountId)) return iAccountId;
-        }
-        return 0;
-    }
-
-    function getOpenPosition(
-        address _source,
-        uint256 _market
-    )
-        public
-        view
-        returns (uint128 accountId, int256 size, int256 pnl, int256 funding)
-    {
-        bytes32 key = keccak256(abi.encodePacked(_source, _market));
-        return _perpGetOpenPosition(_keyAccounts[key], _market);
-    }
-
-    function getOrder(
-        address _source,
-        uint256 _market
-    ) public view returns (Order memory order) {
-        bytes32 key = keccak256(abi.encodePacked(_source, _market));
-        uint128 accountId = _keyAccounts[key];
-        order = _accountOrders[accountId];
-    }
-
-    function getAccountOrder(
-        uint128 _accountId
-    ) public view returns (Order memory order) {
-        order = _accountOrders[_accountId];
-    }
-
-    function accountIdle(uint128 _accountId) public view returns (bool) {
-        return _perpAccountIdle(_accountId);
-    }
-
-    function accountIdleByIndex(uint256 _index) public view returns (bool) {
-        uint128 accountId = accountIds[_index];
-        return accountIdle(accountId);
-    }
-
-    function numOfAccounts() external view returns (uint256) {
-        return accountIds.length;
-    }
-
-    function getKeyAccount(
-        address _source,
-        uint256 _market
-    ) external view returns (uint128) {
-        bytes32 key = keccak256(abi.encodePacked(_source, _market));
-        return _keyAccounts[key];
     }
 
     function checker(
@@ -149,28 +74,16 @@ abstract contract Copytrade is
     function init(address _owner, address _executor) external override {
         if (msg.sender != address(FACTORY)) revert Unauthorized();
         _setInitialOwnership(_owner);
-        _addInitialDelegate(_executor);
+        _setExecutor(_executor);
         _perpInit();
     }
 
     function transferOwnership(address _newOwner) public override {
         super.transferOwnership(_newOwner);
-        FACTORY.updateCopytradeOwnership({
+        FACTORY.updateCopyWalletOwnership({
             _newOwner: _newOwner,
             _oldOwner: msg.sender
         });
-    }
-
-    function closePosition(
-        uint128 _accountId,
-        uint256 _market,
-        uint256 _acceptablePrice
-    )
-        external
-        returns (IPerpsMarket.AsyncOrderData memory retOrder, uint256 fees)
-    {
-        if (!isAuth(msg.sender)) revert Unauthorized();
-        return _perpClosePosition(_accountId, _market, _acceptablePrice);
     }
 
     function execute(
@@ -226,19 +139,13 @@ abstract contract Copytrade is
         /// @dev origin true => amount as fund asset decimals
         uint256 _fundOut = origin
             ? _abs(_amountOut)
-            : _unitToUsd(_abs(_amountOut));
+            : _d18ToUsd(_abs(_amountOut));
         if (_fundOut > availableFund()) {
             revert InsufficientAvailableFund(availableFund(), _fundOut);
         }
     }
 
-    function _allocatedAccount(
-        address _source,
-        uint256 _market
-    ) internal view returns (uint128 accountId) {
-        accountId = getAllocatedAccount(_source, _market);
-        if (accountId == 0) revert NoAccountAvailable();
-    }
+
 
     function _validTask(uint256 _taskId) internal view returns (bool) {
         Task memory task = getTask(_taskId);
@@ -254,9 +161,9 @@ abstract contract Copytrade is
         emit OwnershipTransferred(address(0), _owner);
     }
 
-    function _addInitialDelegate(address _executor) private {
+    function _setExecutor(address _executor) private {
         delegates[_executor] = true;
-        emit DelegatedCopytradeAdded({caller: msg.sender, delegate: _executor});
+        emit DelegatedCopyWalletAdded({caller: msg.sender, delegate: _executor});
     }
 
     function _dispatch(Command _command, bytes calldata _inputs) internal {
@@ -364,12 +271,12 @@ abstract contract Copytrade is
         }
     }
 
-    function _unitToUsd(uint256 _amount) internal view returns (uint256) {
+    function _d18ToUsd(uint256 _amount) internal view returns (uint256) {
         /// @dev convert to fund asset decimals
         return (_amount * 10 ** USD_ASSET.decimals()) / 10 ** 18;
     }
 
-    function _usdToUnit(uint256 _amount) internal view returns (uint256) {
+    function _usdToD18(uint256 _amount) internal view returns (uint256) {
         /// @dev convert to fund asset decimals
         return (_amount * 10 ** 18) / 10 ** USD_ASSET.decimals();
     }
@@ -420,7 +327,7 @@ abstract contract Copytrade is
 
     function _lockFund(int256 _amount, bool origin) internal {
         _sufficientFund(_amount, origin);
-        lockedFund += origin ? _abs(_amount) : _unitToUsd(_abs(_amount));
+        lockedFund += origin ? _abs(_amount) : _d18ToUsd(_abs(_amount));
     }
 
     function _chargeProtocolFee(
@@ -439,7 +346,7 @@ abstract contract Copytrade is
     }
 
     function _preOrder(
-        uint128 _accountId,
+        uint256 _id,
         uint256 _lastSize,
         uint256 _sizeDelta,
         uint256 _price,
@@ -447,13 +354,13 @@ abstract contract Copytrade is
     ) internal {}
 
     function _postOrder(
-        uint128 _accountId,
+        uint256 _id,
         uint256 _lastSize,
         uint256 _sizeDelta,
         uint256 _price,
         bool _isIncrease
     ) internal {
-        Position memory position = _accountPositions[_accountId];
+        Position memory position = _positions[_id];
         uint256 delta = _lastSize > position.lastSize
             ? _lastSize - position.lastSize
             : 0;
@@ -464,11 +371,11 @@ abstract contract Copytrade is
                 (delta * position.lastPrice * 2) / 10 ** 18
             );
             if (chargeFees > position.lastFees) chargeFees = position.lastFees;
-            lockedFund -= _unitToUsd(position.lastFees);
+            lockedFund -= _d18ToUsd(position.lastFees);
             _chargeProtocolFee(
                 delta,
                 position.lastPrice,
-                _unitToUsd(chargeFees)
+                _d18ToUsd(chargeFees)
             );
         }
         uint256 fees = 0;
@@ -476,27 +383,13 @@ abstract contract Copytrade is
             fees = _protocolFee((_sizeDelta * _price * 2) / 10 ** 18);
             _lockFund(int256(fees), false);
         }
-        _accountPositions[_accountId] = Position({
+        _positions[_id] = Position({
             lastSize: _lastSize,
             lastSizeDelta: _sizeDelta,
             lastPrice: _price,
             lastFees: fees
         });
     }
-
-    function _perpGetOpenPosition(
-        uint128 _accountId,
-        uint256 _market
-    )
-        internal
-        view
-        virtual
-        returns (uint128 accountId, int256 size, int256 pnl, int256 funding)
-    {}
-
-    function _perpAccountIdle(
-        uint128 _accountId
-    ) internal view virtual returns (bool) {}
 
     function _perpValidTask(
         Task memory _task
@@ -606,16 +499,6 @@ abstract contract Copytrade is
     function _perpCloseOrder(bytes calldata _inputs) internal virtual {}
 
     function _perpCancelOrder(bytes calldata _inputs) internal virtual {}
-
-    function _perpClosePosition(
-        uint128 _accountId,
-        uint256 _market,
-        uint256 _acceptablePrice
-    )
-        internal
-        virtual
-        returns (IPerpsMarket.AsyncOrderData memory retOrder, uint256 fees)
-    {}
 
     function _perpWithdrawAllMargin(bytes calldata _inputs) internal virtual {}
 

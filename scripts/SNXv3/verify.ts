@@ -1,5 +1,5 @@
 import { ethers, network, run } from "hardhat";
-import { CopinNetworkConfig } from "../../utils/types/config";
+import { SNXv3NetworkConfig } from "../../utils/types/config";
 import {
   CONFIGS_ADDRESS,
   EVENTS_ADDRESS,
@@ -9,12 +9,12 @@ import {
 } from "../../utils/constants";
 
 async function main() {
-  const usdAsset = (network.config as CopinNetworkConfig).USD_ASSET;
-  const sUSDC = (network.config as CopinNetworkConfig).SNX_SUSDC;
-  const sUSD = (network.config as CopinNetworkConfig).SNX_SUSD;
-  const perpsMarket = (network.config as CopinNetworkConfig).SNX_PERPS_MARKET;
-  const spotMarket = (network.config as CopinNetworkConfig).SNX_SPOT_MARKET;
-  const automate = (network.config as CopinNetworkConfig).AUTOMATE;
+  const usdAsset = (network.config as SNXv3NetworkConfig).USD_ASSET;
+  const sUSDC = (network.config as SNXv3NetworkConfig).SNX_SUSDC;
+  const sUSD = (network.config as SNXv3NetworkConfig).SNX_SUSD;
+  const perpsMarket = (network.config as SNXv3NetworkConfig).SNX_PERPS_MARKET;
+  const spotMarket = (network.config as SNXv3NetworkConfig).SNX_SPOT_MARKET;
+  const automate = (network.config as SNXv3NetworkConfig).AUTOMATE;
 
   const [wallet] = await ethers.getSigners();
 

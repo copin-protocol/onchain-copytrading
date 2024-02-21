@@ -1,6 +1,6 @@
 import { ethers, network, run } from "hardhat";
 import { abi as factoryAbi } from "../../artifacts/contracts/Factory.sol/Factory.json";
-import { CopinNetworkConfig } from "../../utils/types/config";
+import { SNXv3NetworkConfig } from "../../utils/types/config";
 import {
   CONFIGS_ADDRESS,
   EVENTS_ADDRESS,
@@ -10,12 +10,12 @@ import {
 } from "../../utils/constants";
 
 async function main() {
-  const usdAsset = (network.config as CopinNetworkConfig).USD_ASSET;
-  const sUSDC = (network.config as CopinNetworkConfig).SNX_SUSDC;
-  const sUSD = (network.config as CopinNetworkConfig).SNX_SUSD;
-  const perpsMarket = (network.config as CopinNetworkConfig).SNX_PERPS_MARKET;
-  const spotMarket = (network.config as CopinNetworkConfig).SNX_SPOT_MARKET;
-  const automate = (network.config as CopinNetworkConfig).AUTOMATE;
+  const usdAsset = (network.config as SNXv3NetworkConfig).USD_ASSET;
+  const sUSDC = (network.config as SNXv3NetworkConfig).SNX_SUSDC;
+  const sUSD = (network.config as SNXv3NetworkConfig).SNX_SUSD;
+  const perpsMarket = (network.config as SNXv3NetworkConfig).SNX_PERPS_MARKET;
+  const spotMarket = (network.config as SNXv3NetworkConfig).SNX_SPOT_MARKET;
+  const automate = (network.config as SNXv3NetworkConfig).AUTOMATE;
 
   const [wallet] = await ethers.getSigners();
 
@@ -43,8 +43,8 @@ async function main() {
   console.log("TaskCreator deployed to:", taskCreator.address);
   // const taskCreator = { address: TASK_CREATOR_ADDRESS };
 
-  const Copytrade = await ethers.getContractFactory("CopytradeSNX");
-  const implementation = await Copytrade.deploy({
+  const CopyWallet = await ethers.getContractFactory("CopyWalletSNXv3");
+  const implementation = await CopyWallet.deploy({
     factory: factory.address,
     events: events.address,
     configs: configs.address,
@@ -57,7 +57,7 @@ async function main() {
     sUSD,
     ethMarketId: 100,
   });
-  console.log("Copytrade Implementation deployed to:", implementation.address);
+  console.log("CopyWallet Implementation deployed to:", implementation.address);
   // const implementation = {
   //   address: IMPLEMENTATION_ADDRESS,
   // };
@@ -70,7 +70,7 @@ async function main() {
 
   const tx = await factory
     .connect(wallet as any)
-    .upgradeCopytradeImplementation(implementation.address);
+    .upgradeCopyWalletImplementation(implementation.address);
 
   console.log("update", tx);
 

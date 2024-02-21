@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
 
-interface ICopytradeProxy {
+interface ICopyWalletProxy {
     /// @dev thrown if beacon is not set to a valid address
     error BeaconNotSet();
 

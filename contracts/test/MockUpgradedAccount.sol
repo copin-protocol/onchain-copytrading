@@ -2,7 +2,7 @@
 pragma solidity 0.8.18;
 import {Auth} from "../utils/Auth.sol";
 
-contract MockUpgradedCopytrade is Auth {
+contract MockUpgradedCopyWallet is Auth {
     bytes32 public constant VERSION = "9.9.9";
 
     constructor() Auth(address(0)) {}

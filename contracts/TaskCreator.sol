@@ -9,7 +9,7 @@ contract TaskCreator is AutomateTaskCreator {
     address public immutable factory;
     mapping(bytes32 => address) _taskOwners;
 
-    error OnlyCopytrades();
+    error OnlyCopyWallets();
 
     constructor(
         address _factory,
@@ -18,14 +18,14 @@ contract TaskCreator is AutomateTaskCreator {
         factory = _factory;
     }
 
-    modifier onlyCopytrades() {
+    modifier onlyCopyWallets() {
         if (!IFactory(factory).accounts(msg.sender)) {
-            revert OnlyCopytrades();
+            revert OnlyCopyWallets();
         }
         _;
     }
 
-    function cancelTask(bytes32 _gelatoTaskId) external onlyCopytrades {
+    function cancelTask(bytes32 _gelatoTaskId) external onlyCopyWallets {
         require(_taskOwners[_gelatoTaskId] == msg.sender, "UNAUTHORIZED");
         _cancelTask(_gelatoTaskId);
     }
@@ -33,7 +33,7 @@ contract TaskCreator is AutomateTaskCreator {
     function createTask(
         bytes memory execData,
         ModuleData memory moduleData
-    ) external onlyCopytrades returns (bytes32 _gelatoTaskId) {
+    ) external onlyCopyWallets returns (bytes32 _gelatoTaskId) {
         _gelatoTaskId = _createTask(
             msg.sender,
             execData,

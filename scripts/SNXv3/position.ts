@@ -1,10 +1,10 @@
 import { formatEther, parseEther } from "@ethersproject/units";
 import { ethers, network } from "hardhat";
-import { abi as copytradeAbi } from "../artifacts/contracts/CopytradeSNX.sol/CopytradeSNX.json";
-import { MARKET_IDS, SMART_COPYTRADE_ADDRESS } from "../utils/constants";
-import { CopinNetworkConfig } from "../utils/types/config";
-import perpsMarketAbi from "../utils/abis/perpsMarketAbi";
-import { getRelaySigner } from "../utils/relay";
+import { abi as copyWalletAbi } from "../../artifacts/contracts/CopyWalletSNXv3.sol/CopyWalletSNXv3.json";
+import { MARKET_IDS, SMART_WALLET_ADDRESS } from "../../utils/constants";
+import { SNXv3NetworkConfig } from "../../utils/types/config";
+import perpsMarketAbi from "../../utils/abis/perpsMarketAbi";
+import { getRelaySigner } from "../../utils/relay";
 
 export const DEFAULT_MARGIN = ethers.utils.parseEther("100");
 
@@ -12,21 +12,21 @@ async function main() {
   const signer = getRelaySigner();
 
   const demoSource = {
-    address: SMART_COPYTRADE_ADDRESS,
+    address: SMART_WALLET_ADDRESS,
     // address: "0x1aA25aBC0f3A29d017638ec9Ba02668921F91016",
   };
 
-  const copytrade = new ethers.Contract(
-    // SMART_COPYTRADE_ADDRESS,
-    SMART_COPYTRADE_ADDRESS,
-    copytradeAbi,
+  const copyWallet = new ethers.Contract(
+    // SMART_WALLET_ADDRESS,
+    SMART_WALLET_ADDRESS,
+    copyWalletAbi,
     signer as any
   );
 
-  const perps = (network.config as CopinNetworkConfig).SNX_PERPS_MARKET;
+  const perps = (network.config as SNXv3NetworkConfig).SNX_PERPS_MARKET;
   const perpsMarket = new ethers.Contract(perps, perpsMarketAbi, signer as any);
 
-  const accountId = await copytrade.getAllocatedAccount(
+  const accountId = await copyWallet.getAllocatedAccount(
     demoSource.address,
     MARKET_IDS.ETH
   );
@@ -45,14 +45,14 @@ async function main() {
     }))
   );
 
-  const keyAccount = await copytrade.getKeyAccount(
+  const keyAccount = await copyWallet.getKeyAccount(
     demoSource.address,
     MARKET_IDS.ETH
   );
 
   console.log("keyAccount", keyAccount.toString());
 
-  const order = await copytrade.getAccountOrder(accountId);
+  const order = await copyWallet.getAccountOrder(accountId);
   console.log(
     "order",
     Object.entries(order).map(([key, value]: any[]) => ({
