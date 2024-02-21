@@ -4,6 +4,7 @@
     "deploy:snx:testnet": "npx hardhat run --network testnet scripts/build/deploySNX.ts",
     "verify:snx:testnet": "npx hardhat run --network testnet scripts/build/verifySNX.ts",
     "deploy:snx:mainnet": "npx hardhat run --network mainnet scripts/build/deploySNX.ts",
+    "verify:snx:mainnet": "npx hardhat run --network mainnet scripts/build/verifySNX.ts",
     "compile": "hardhat compile",
     "test": "hardhat test",
     "watch": "hardhat watch"

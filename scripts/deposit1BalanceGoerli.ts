@@ -10,12 +10,9 @@ async function main() {
     gelato1BalanceAbi,
     wallet1 as any
   );
-  const tx = await gelato1Balance.depositNative(
-    "0xE9D1E94E8A933b2fDcc8415D9D697e5070c4c421",
-    {
-      value: parseEther("0.05"),
-    }
-  );
+  const tx = await gelato1Balance.depositNative("", {
+    value: parseEther("0.05"),
+  });
   console.log(tx);
 }
 

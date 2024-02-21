@@ -19,48 +19,48 @@ async function main() {
 
   const [wallet] = await ethers.getSigners();
 
-  // const Factory = await ethers.getContractFactory("Factory");
-  // const factory = await Factory.deploy(wallet.address);
-  // await factory.deployed();
-  // console.log("Factory deployed to:", factory.address);
-  const factory = new ethers.Contract(FACTORY_ADDRESS, factoryAbi);
+  const Factory = await ethers.getContractFactory("Factory");
+  const factory = await Factory.deploy(wallet.address);
+  await factory.deployed();
+  console.log("Factory deployed to:", factory.address);
+  // const factory = new ethers.Contract(FACTORY_ADDRESS, factoryAbi);
 
-  // const Events = await ethers.getContractFactory("Events");
-  // const events = await Events.deploy(factory.address);
-  // await events.deployed();
-  // console.log("Events deployed to:", events.address);
-  const events = { address: EVENTS_ADDRESS };
+  const Events = await ethers.getContractFactory("Events");
+  const events = await Events.deploy(factory.address);
+  await events.deployed();
+  console.log("Events deployed to:", events.address);
+  // const events = { address: EVENTS_ADDRESS };
 
-  // const Configs = await ethers.getContractFactory("Configs");
-  // const configs = await Configs.deploy(wallet.address);
-  // await configs.deployed();
-  // console.log("Configs deployed to:", configs.address);
-  const configs = { address: CONFIGS_ADDRESS };
+  const Configs = await ethers.getContractFactory("Configs");
+  const configs = await Configs.deploy(wallet.address);
+  await configs.deployed();
+  console.log("Configs deployed to:", configs.address);
+  // const configs = { address: CONFIGS_ADDRESS };
 
-  // const TaskCreator = await ethers.getContractFactory("TaskCreator");
-  // const taskCreator = await TaskCreator.deploy(factory.address, automate);
-  // await taskCreator.deployed();
-  // console.log("TaskCreator deployed to:", taskCreator.address);
-  const taskCreator = { address: TASK_CREATOR_ADDRESS };
+  const TaskCreator = await ethers.getContractFactory("TaskCreator");
+  const taskCreator = await TaskCreator.deploy(factory.address, automate);
+  await taskCreator.deployed();
+  console.log("TaskCreator deployed to:", taskCreator.address);
+  // const taskCreator = { address: TASK_CREATOR_ADDRESS };
 
-  // const Copytrade = await ethers.getContractFactory("CopytradeSNX");
-  // const implementation = await Copytrade.deploy({
-  //   factory: factory.address,
-  //   events: events.address,
-  //   configs: configs.address,
-  //   usdAsset,
-  //   automate,
-  //   taskCreator: taskCreator.address,
-  //   perpsMarket,
-  //   spotMarket,
-  //   sUSDC,
-  //   sUSD,
-  //   ethMarketId: 100,
-  // });
-  // console.log("Copytrade Implementation deployed to:", implementation.address);
-  const implementation = {
-    address: IMPLEMENTATION_ADDRESS,
-  };
+  const Copytrade = await ethers.getContractFactory("CopytradeSNX");
+  const implementation = await Copytrade.deploy({
+    factory: factory.address,
+    events: events.address,
+    configs: configs.address,
+    usdAsset,
+    automate,
+    taskCreator: taskCreator.address,
+    perpsMarket,
+    spotMarket,
+    sUSDC,
+    sUSD,
+    ethMarketId: 100,
+  });
+  console.log("Copytrade Implementation deployed to:", implementation.address);
+  // const implementation = {
+  //   address: IMPLEMENTATION_ADDRESS,
+  // };
 
   await new Promise((resolve) =>
     setTimeout(() => {

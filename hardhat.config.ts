@@ -30,6 +30,14 @@ const config: HardhatUserConfig = {
         process.env.PRIVATE_KEY_3!,
       ],
     },
+    polygon: {
+      url: process.env.POLYGON_NODE_URL,
+      accounts: [
+        process.env.PRIVATE_KEY_1!,
+        process.env.PRIVATE_KEY_2!,
+        process.env.PRIVATE_KEY_3!,
+      ],
+    },
     testnet: {
       url: process.env.TESTNET_NODE_URL,
       accounts: [
@@ -64,7 +72,7 @@ const config: HardhatUserConfig = {
       ...{
         USD_ASSET: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
         AUTOMATE: "0x2A6C106ae13B558BB9E2Ec64Bd2f1f7BEFF3A5E0",
-        EXECUTOR: "",
+        EXECUTOR: "0xC5417a77f8b0649c47d00363370D9D4A25e7d1Ef",
         SNX_PERPS_MARKET: "0x0A2AF931eFFd34b81ebcc57E3d3c9B1E1dE1C9Ce",
         SNX_SPOT_MARKET: "0x18141523403e2595D31b22604AcB8Fc06a4CaA61",
         SNX_SUSDC: "0xc74ea762cf06c9151ce074e6a569a5945b6302e7",
@@ -101,6 +109,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api-sepolia.basescan.org/api",
           browserURL: "https://sepolia.basescan.org",
+        },
+      },
+      {
+        network: "base",
+        chainId: 8453,
+        urls: {
+          apiURL: "https://api.basescan.org/api",
+          browserURL: "https://basescan.org",
         },
       },
       {
