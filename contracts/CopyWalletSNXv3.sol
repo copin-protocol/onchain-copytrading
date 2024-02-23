@@ -4,8 +4,8 @@ pragma solidity 0.8.18;
 import {ICopyWallet} from "./interfaces/ICopyWallet.sol";
 import {IConfigs} from "./interfaces/IConfigs.sol";
 import {ICopyWalletSNXv3} from "./interfaces/ICopyWalletSNXv3.sol";
-import {IPerpsMarket} from "./interfaces/synthetix/IPerpsMarket.sol";
-import {ISpotMarket} from "./interfaces/synthetix/ISpotMarket.sol";
+import {IPerpsMarket} from "./interfaces/SNXv3/IPerpsMarket.sol";
+import {ISpotMarket} from "./interfaces/SNXv3/ISpotMarket.sol";
 import {IERC20} from "./interfaces/token/IERC20.sol";
 import {CopyWallet} from "./core/CopyWallet.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
@@ -17,8 +17,9 @@ contract CopyWalletSNXv3 is CopyWallet, ICopyWalletSNXv3, ERC721Holder {
     IERC20 internal immutable SUSD;
     uint128 internal immutable ETH_MARKET_ID;
     uint128[] public accountIds;
-    
+
     mapping(bytes32 => uint128) internal _keyAccounts;
+    mapping(uint128 => Order) internal _accountOrders;
 
     constructor(
         ConstructorParams memory _params
@@ -73,18 +74,10 @@ contract CopyWalletSNXv3 is CopyWallet, ICopyWalletSNXv3, ERC721Holder {
         return PERPS_MARKET.isAuthorized(accountId, permission, address(this));
     }
 
-    function availableFundD18() public view override returns (uint256) {
-        return _usdToD18(availableFund());
-    }
-
-    function lockedFundD18() public view override returns (uint256) {
-        return _usdToD18(lockedFund);
-    }
-
-        function getAccountOrder(
+    function getAccountOrder(
         uint128 _accountId
     ) public view returns (Order memory order) {
-        order = _orders[uint256(_accountId)];
+        order = _accountOrders[_accountId];
     }
 
     function accountIdle(uint128 _accountId) public view returns (bool) {
@@ -114,7 +107,7 @@ contract CopyWalletSNXv3 is CopyWallet, ICopyWalletSNXv3, ERC721Holder {
     ) public view returns (uint128) {
         bytes32 key = keccak256(abi.encodePacked(_source, _market));
         uint128 accountId = _keyAccounts[key];
-        Order memory order = _orders[uint256(accountId)];
+        Order memory order = _accountOrders[accountId];
         if (
             accountId != 0 && order.source == _source && order.market == _market
         ) return accountId;
@@ -143,7 +136,7 @@ contract CopyWalletSNXv3 is CopyWallet, ICopyWalletSNXv3, ERC721Holder {
     ) public view returns (Order memory order) {
         bytes32 key = keccak256(abi.encodePacked(_source, _market));
         uint128 accountId = _keyAccounts[key];
-        order = _orders[uint256(accountId)];
+        order = _accountOrders[accountId];
     }
 
     function getPerpIdleMargin() external view returns (int256 margin) {
@@ -267,7 +260,7 @@ contract CopyWalletSNXv3 is CopyWallet, ICopyWalletSNXv3, ERC721Holder {
     {
         return
             _placeOrder({
-                _source: _orders[uint256(_accountId)].source,
+                _source: _accountOrders[_accountId].source,
                 _marketId: uint128(_market),
                 _accountId: _accountId,
                 _sizeDelta: 0, // sizeDelta 0 = close position
@@ -281,7 +274,7 @@ contract CopyWalletSNXv3 is CopyWallet, ICopyWalletSNXv3, ERC721Holder {
             uint128 accountId = accountIds[i];
             if (accountIdle(accountId)) {
                 int256 margin = PERPS_MARKET.getAvailableMargin(accountId);
-                _modifyCollateral(accountId, margin * -1);
+                _modifyCollateral(accountId, -margin);
             }
         }
     }
@@ -289,7 +282,7 @@ contract CopyWalletSNXv3 is CopyWallet, ICopyWalletSNXv3, ERC721Holder {
     function _perpValidTask(
         Task memory _task
     ) internal view override returns (bool) {
-        uint256 price = _marketIndexPrice(_getMarketId(_task.market));
+        uint256 price = _indexPrice(_getMarketId(_task.market));
         if (_task.command == TaskCommand.STOP_ORDER) {
             if (_task.sizeDelta > 0) {
                 // Long: increase position size (buy) once *above* trigger price
@@ -400,19 +393,17 @@ contract CopyWalletSNXv3 is CopyWallet, ICopyWalletSNXv3, ERC721Holder {
         );
         // close
         if (_sizeDelta == 0) {
-            _sizeDelta = lastSize * -1;
+            _sizeDelta = -lastSize;
+        } else if (
+            !_isSameSign(_sizeDelta, lastSize) &&
+            _abs(_sizeDelta) > _abs(lastSize)
+        ) {
+            // reduce only
+            _sizeDelta = -lastSize;
         }
 
-        uint256 price = _marketIndexPrice(_marketId);
         bool isIncrease = lastSize == 0 || _isSameSign(lastSize, _sizeDelta);
-
-        // _preOrder({
-        //     _accountId: _accountId,
-        //     _lastSize: lastSize,
-        //     _sizeDelta: _sizeDelta,
-        //     _price: price,
-        //     _isIncrease: isIncrease
-        // });
+        uint256 price = _indexPrice(_marketId);
 
         (retOrder, fees) = PERPS_MARKET.commitOrder(
             IPerpsMarket.OrderCommitmentRequest({
@@ -428,18 +419,15 @@ contract CopyWalletSNXv3 is CopyWallet, ICopyWalletSNXv3, ERC721Holder {
             })
         );
 
-        _orders[uint256(_accountId)] = Order({
-            market: uint256(_marketId),
-            sizeDelta: int256(_sizeDelta),
-            acceptablePrice: _acceptablePrice,
-            commitmentTime: block.timestamp,
-            commitmentBlock: block.number,
-            fees: fees,
-            source: _source
+        _accountOrders[_accountId] = Order({
+            market: _marketId,
+            source: _source,
+            commitmentBlock: block.number
         });
 
         _postOrder({
             _id: uint256(_accountId),
+            _source: _source,
             _lastSize: _abs(lastSize),
             _sizeDelta: _abs(_sizeDelta),
             _price: price,
@@ -462,10 +450,8 @@ contract CopyWalletSNXv3 is CopyWallet, ICopyWalletSNXv3, ERC721Holder {
         );
     }
 
-    function _perpAccountIdle(
-        uint128 _accountId
-    ) internal view returns (bool) {
-        Order memory order = _orders[uint256(_accountId)];
+    function _perpAccountIdle(uint128 _accountId) internal view returns (bool) {
+        Order memory order = _accountOrders[_accountId];
         if (order.market == 0) return true;
         (, , int128 size) = IPerpsMarket(PERPS_MARKET).getOpenPosition(
             _accountId,
@@ -480,9 +466,7 @@ contract CopyWalletSNXv3 is CopyWallet, ICopyWalletSNXv3, ERC721Holder {
         return uint128(_market);
     }
 
-    function _marketIndexPrice(
-        uint128 _marketId
-    ) internal view returns (uint256) {
+    function _indexPrice(uint128 _marketId) internal view returns (uint256) {
         return IPerpsMarket(PERPS_MARKET).indexPrice(_marketId);
     }
 
@@ -491,9 +475,6 @@ contract CopyWalletSNXv3 is CopyWallet, ICopyWalletSNXv3, ERC721Holder {
         uint128 _marketId
     ) internal view returns (uint256) {
         // ETH: 100
-        return
-            _d18ToUsd(
-                (_tokenAmount * _marketIndexPrice(_marketId)) / 10 ** 18
-            );
+        return _d18ToUsd((_tokenAmount * _indexPrice(_marketId)) / 10 ** 18);
     }
 }

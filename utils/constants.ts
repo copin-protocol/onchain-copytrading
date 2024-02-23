@@ -20,7 +20,7 @@ export enum Command {
   GELETO_CANCEL_TASK = 11,
 }
 
-export const MARKET_IDS = {
+export const SNX_V3_MARKET_IDS = {
   ETH: 100,
   BTC: 200,
 };

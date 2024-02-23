@@ -31,17 +31,8 @@ interface ICopyWallet {
         address taskCreator;
     }
 
-    struct Order {
-        uint256 market;
-        int256 sizeDelta;
-        uint256 acceptablePrice;
-        uint256 commitmentTime;
-        uint256 commitmentBlock;
-        uint256 fees;
-        address source;
-    }
-
     struct Position {
+        address source;
         uint256 lastSize;
         uint256 lastSizeDelta;
         uint256 lastPrice;
@@ -87,19 +78,6 @@ interface ICopyWallet {
     function availableFund() external view returns (uint256);
 
     function availableFundD18() external view returns (uint256);
-
-    function getAllocatedAccount(
-        address _source,
-        uint256 _market
-    ) external view returns (uint128);
-
-    function getOpenPosition(
-        address _source,
-        uint256 _market
-    )
-        external
-        view
-        returns (uint128 accountId, int256 size, int256 pnl, int256 funding);
 
     function checker(
         uint256 _taskId

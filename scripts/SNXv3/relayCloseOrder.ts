@@ -3,7 +3,7 @@ import { ethers, network } from "hardhat";
 import { abi as copyWalletAbi } from "../../artifacts/contracts/CopyWalletSNXv3.sol/CopyWalletSNXv3.json";
 import {
   Command,
-  MARKET_IDS,
+  SNX_V3_MARKET_IDS,
   SMART_WALLET_ADDRESS,
 } from "../../utils/constants";
 import { SNXv3NetworkConfig } from "../../utils/types/config";
@@ -31,21 +31,24 @@ async function main() {
   const perps = (network.config as SNXv3NetworkConfig).SNX_PERPS_MARKET;
   const perpsMarket = new ethers.Contract(perps, perpsMarketAbi, signer as any);
 
-  const indexPrice = await perpsMarket.indexPrice(MARKET_IDS.ETH);
+  const indexPrice = await perpsMarket.indexPrice(SNX_V3_MARKET_IDS.ETH);
   const commands: Command[] = [];
   const inputs: string[] = [];
 
   // get account allocated for source trader address + market address
   const accountId = await copyWallet.getAllocatedAccount(
     demoSource.address,
-    MARKET_IDS.ETH
+    SNX_V3_MARKET_IDS.ETH
   );
 
   if (accountId.eq(0)) {
     throw Error("Position not found");
   }
 
-  const position = await perpsMarket.getOpenPosition(accountId, MARKET_IDS.ETH);
+  const position = await perpsMarket.getOpenPosition(
+    accountId,
+    SNX_V3_MARKET_IDS.ETH
+  );
   if (position.positionSize.eq(0)) {
     throw Error("No open position");
   }
@@ -66,7 +69,7 @@ async function main() {
   // }
 
   const fillPrice = await perpsMarket.fillPrice(
-    MARKET_IDS.ETH,
+    SNX_V3_MARKET_IDS.ETH,
     sizeDelta,
     indexPrice
   );
@@ -82,7 +85,7 @@ async function main() {
       ["address", "uint256", "uint256", "address"],
       [
         demoSource.address,
-        MARKET_IDS.ETH,
+        SNX_V3_MARKET_IDS.ETH,
         calculateAcceptablePrice(fillPrice, sizeDelta),
         demoSource.address,
       ]

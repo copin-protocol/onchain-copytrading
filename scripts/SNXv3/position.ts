@@ -1,7 +1,7 @@
 import { formatEther, parseEther } from "@ethersproject/units";
 import { ethers, network } from "hardhat";
 import { abi as copyWalletAbi } from "../../artifacts/contracts/CopyWalletSNXv3.sol/CopyWalletSNXv3.json";
-import { MARKET_IDS, SMART_WALLET_ADDRESS } from "../../utils/constants";
+import { SNX_V3_MARKET_IDS, SMART_WALLET_ADDRESS } from "../../utils/constants";
 import { SNXv3NetworkConfig } from "../../utils/types/config";
 import perpsMarketAbi from "../../utils/abis/perpsMarketAbi";
 import { getRelaySigner } from "../../utils/relay";
@@ -28,16 +28,19 @@ async function main() {
 
   const accountId = await copyWallet.getAllocatedAccount(
     demoSource.address,
-    MARKET_IDS.ETH
+    SNX_V3_MARKET_IDS.ETH
   );
 
   console.log("accountId", accountId.toString());
 
-  const indexPrice = await perpsMarket.indexPrice(MARKET_IDS.ETH);
+  const indexPrice = await perpsMarket.indexPrice(SNX_V3_MARKET_IDS.ETH);
 
   console.log("indexPrice", ethers.utils.formatEther(indexPrice));
 
-  const position = await perpsMarket.getOpenPosition(accountId, MARKET_IDS.ETH);
+  const position = await perpsMarket.getOpenPosition(
+    accountId,
+    SNX_V3_MARKET_IDS.ETH
+  );
   console.log(
     "position",
     Object.entries(position).map(([key, value]: any[]) => ({
@@ -47,7 +50,7 @@ async function main() {
 
   const keyAccount = await copyWallet.getKeyAccount(
     demoSource.address,
-    MARKET_IDS.ETH
+    SNX_V3_MARKET_IDS.ETH
   );
 
   console.log("keyAccount", keyAccount.toString());

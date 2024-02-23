@@ -3,7 +3,7 @@ import { ethers, network } from "hardhat";
 import { abi as copyWalletAbi } from "../../artifacts/contracts/CopyWalletSNXv3.sol/CopyWalletSNXv3.json";
 import {
   Command,
-  MARKET_IDS,
+  SNX_V3_MARKET_IDS,
   SMART_WALLET_ADDRESS,
 } from "../../utils/constants";
 import { SNXv3NetworkConfig } from "../../utils/types/config";
@@ -43,7 +43,7 @@ async function main() {
   // get account allocated for source trader address + market address
   const accountId = await copyWallet.getAllocatedAccount(
     demoSource.address,
-    MARKET_IDS.ETH
+    SNX_V3_MARKET_IDS.ETH
   );
   console.log("accountId", accountId.toString());
   const indexPrice = await perpsMarket.indexPrice("100");
@@ -65,13 +65,13 @@ async function main() {
       0,
       abiDecoder.encode(
         ["address", "uint256", "int256"],
-        [demoSource.address, MARKET_IDS.ETH, totalAmount]
+        [demoSource.address, SNX_V3_MARKET_IDS.ETH, totalAmount]
       )
     );
   } else {
     const position = await perpsMarket.getOpenPosition(
       accountId,
-      MARKET_IDS.ETH
+      SNX_V3_MARKET_IDS.ETH
     );
     if (!position.positionSize.eq(0)) {
       totalAmount = (position.positionSize as BigNumber)
@@ -102,7 +102,7 @@ async function main() {
         perpsMarket.getWithdrawableMargin(accountId),
         perpsMarket.requiredMarginForOrder(
           accountId,
-          MARKET_IDS.ETH,
+          SNX_V3_MARKET_IDS.ETH,
           sizeDelta
         ),
       ]);
@@ -160,7 +160,7 @@ async function main() {
         inputs.push(
           abiDecoder.encode(
             ["address", "uint256", "int256"],
-            [demoSource.address, MARKET_IDS.ETH, modifyAmount]
+            [demoSource.address, SNX_V3_MARKET_IDS.ETH, modifyAmount]
           )
         );
       }
@@ -169,7 +169,7 @@ async function main() {
   }
 
   const fillPrice = await perpsMarket.fillPrice(
-    MARKET_IDS.ETH,
+    SNX_V3_MARKET_IDS.ETH,
     sizeDelta,
     indexPrice
   );
@@ -186,7 +186,7 @@ async function main() {
       ["address", "uint256", "int256", "uint256", "address"],
       [
         demoSource.address,
-        MARKET_IDS.ETH,
+        SNX_V3_MARKET_IDS.ETH,
         sizeDelta,
         calculateAcceptablePrice(fillPrice, sizeDelta),
         demoSource.address,

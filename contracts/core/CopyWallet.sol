@@ -8,7 +8,7 @@ import {IConfigs} from "../interfaces/IConfigs.sol";
 import {IEvents} from "../interfaces/IEvents.sol";
 import {ITaskCreator} from "../interfaces/ITaskCreator.sol";
 import {IERC20} from "../interfaces/token/IERC20.sol";
-import {IPerpsMarket} from "../interfaces/synthetix/IPerpsMarket.sol";
+import {IPerpsMarket} from "../interfaces/SNXv3/IPerpsMarket.sol";
 import {Auth} from "../utils/Auth.sol";
 import {AutomateReady} from "../utils/gelato/AutomateReady.sol";
 import {Module, ModuleData, IAutomate} from "../utils/gelato/Types.sol";
@@ -33,7 +33,6 @@ abstract contract CopyWallet is
     uint256 public taskId;
 
     mapping(uint256 => Task) internal _tasks;
-    mapping(uint256 => Order) internal _orders;
     mapping(uint256 => Position) internal _positions;
 
     constructor(
@@ -52,6 +51,14 @@ abstract contract CopyWallet is
 
     function availableFund() public view override returns (uint256) {
         return USD_ASSET.balanceOf(address(this)) - lockedFund;
+    }
+
+    function availableFundD18() public view override returns (uint256) {
+        return _usdToD18(availableFund());
+    }
+
+    function lockedFundD18() public view override returns (uint256) {
+        return _usdToD18(lockedFund);
     }
 
     function checker(
@@ -145,8 +152,6 @@ abstract contract CopyWallet is
         }
     }
 
-
-
     function _validTask(uint256 _taskId) internal view returns (bool) {
         Task memory task = getTask(_taskId);
 
@@ -163,7 +168,10 @@ abstract contract CopyWallet is
 
     function _setExecutor(address _executor) private {
         delegates[_executor] = true;
-        emit DelegatedCopyWalletAdded({caller: msg.sender, delegate: _executor});
+        emit DelegatedCopyWalletAdded({
+            caller: msg.sender,
+            delegate: _executor
+        });
     }
 
     function _dispatch(Command _command, bytes calldata _inputs) internal {
@@ -345,16 +353,17 @@ abstract contract CopyWallet is
         });
     }
 
-    function _preOrder(
-        uint256 _id,
-        uint256 _lastSize,
-        uint256 _sizeDelta,
-        uint256 _price,
-        bool _isIncrease
-    ) internal {}
+    // function _preOrder(
+    //     uint256 _id,
+    //     uint256 _lastSize,
+    //     uint256 _sizeDelta,
+    //     uint256 _price,
+    //     bool _isIncrease
+    // ) internal {}
 
     function _postOrder(
         uint256 _id,
+        address _source,
         uint256 _lastSize,
         uint256 _sizeDelta,
         uint256 _price,
@@ -384,6 +393,7 @@ abstract contract CopyWallet is
             _lockFund(int256(fees), false);
         }
         _positions[_id] = Position({
+            source: _source,
             lastSize: _lastSize,
             lastSizeDelta: _sizeDelta,
             lastPrice: _price,

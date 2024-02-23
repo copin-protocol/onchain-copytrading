@@ -3,7 +3,7 @@ import { ethers, network } from "hardhat";
 import { abi as copyWalletAbi } from "../../artifacts/contracts/CopyWalletSNXv3.sol/CopyWalletSNXv3.json";
 import {
   Command,
-  MARKET_IDS,
+  SNX_V3_MARKET_IDS,
   SMART_WALLET_ADDRESS,
 } from "../../utils/constants";
 import { SNXv3NetworkConfig } from "../../utils/types/config";
@@ -31,7 +31,7 @@ async function main() {
     [
       abiDecoder.encode(
         ["address", "uint256"],
-        [demoSource.address, MARKET_IDS.ETH]
+        [demoSource.address, SNX_V3_MARKET_IDS.ETH]
       ),
     ]
   );
