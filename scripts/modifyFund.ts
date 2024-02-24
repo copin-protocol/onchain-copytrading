@@ -2,18 +2,18 @@
 import { ethers, network } from "hardhat";
 import { abi as copyWalletAbi } from "../artifacts/contracts/CopyWalletSNXv3.sol/CopyWalletSNXv3.json";
 import { abi as mockERC20 } from "../artifacts/contracts/test/MockERC20.sol/MockERC20.json";
-import { Command, SMART_WALLET_ADDRESS } from "../utils/constants";
+import { Command, CONFIG } from "../utils/constants";
 import { SNXv3NetworkConfig } from "../utils/types/config";
 // const { formatUnits } = require("ethers/lib/utils");
 
-export const FUND = ethers.utils.parseUnits("200", 6);
+export const FUND = ethers.utils.parseUnits("100", 18);
 
 const abiDecoder = ethers.utils.defaultAbiCoder;
 
 async function main() {
   const [wallet1, wallet2] = await ethers.getSigners();
   const copyWallet = new ethers.Contract(
-    SMART_WALLET_ADDRESS,
+    CONFIG.SMART_WALLET_ADDRESS,
     copyWalletAbi,
     wallet2 as any
   );
@@ -22,8 +22,8 @@ async function main() {
 
   const fund = new ethers.Contract(usdAsset, mockERC20, wallet2 as any);
 
-  // const approvedTx = await fund.approve(copyWallet.address, FUND);
-  // console.log("approvedTx", approvedTx);
+  const approvedTx = await fund.approve(copyWallet.address, FUND);
+  console.log("approvedTx", approvedTx);
 
   const commands = [Command.OWNER_MODIFY_FUND];
   const inputs = [abiDecoder.encode(["int256"], [FUND])];

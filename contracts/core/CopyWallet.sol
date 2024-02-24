@@ -72,6 +72,10 @@ abstract contract CopyWallet is
         if (tx.gasprice > 200 gwei) return (false, bytes("Gas price too high"));
     }
 
+    function positions(uint256 _key) public view returns (Position memory) {
+        return _positions[_key];
+    }
+
     function getTask(
         uint256 _taskId
     ) public view override returns (Task memory) {

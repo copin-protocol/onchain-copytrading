@@ -1,13 +1,7 @@
 import { ethers, network, run } from "hardhat";
 import { abi as factoryAbi } from "../../artifacts/contracts/Factory.sol/Factory.json";
 import { SNXv3NetworkConfig } from "../../utils/types/config";
-import {
-  CONFIGS_ADDRESS,
-  EVENTS_ADDRESS,
-  FACTORY_ADDRESS,
-  IMPLEMENTATION_ADDRESS,
-  TASK_CREATOR_ADDRESS,
-} from "../../utils/constants";
+import { CONFIG } from "../../utils/constants";
 
 async function main() {
   const usdAsset = (network.config as SNXv3NetworkConfig).USD_ASSET;
@@ -23,25 +17,25 @@ async function main() {
   const factory = await Factory.deploy(wallet.address);
   await factory.deployed();
   console.log("Factory deployed to:", factory.address);
-  // const factory = new ethers.Contract(FACTORY_ADDRESS, factoryAbi);
+  // const factory = new ethers.Contract(CONFIG.FACTORY_ADDRESS, factoryAbi);
 
   const Events = await ethers.getContractFactory("Events");
   const events = await Events.deploy(factory.address);
   await events.deployed();
   console.log("Events deployed to:", events.address);
-  // const events = { address: EVENTS_ADDRESS };
+  // const events = { address: CONFIG.EVENTS_ADDRESS };
 
   const Configs = await ethers.getContractFactory("Configs");
   const configs = await Configs.deploy(wallet.address);
   await configs.deployed();
   console.log("Configs deployed to:", configs.address);
-  // const configs = { address: CONFIGS_ADDRESS };
+  // const configs = { address: CONFIG.CONFIGS_ADDRESS };
 
   const TaskCreator = await ethers.getContractFactory("TaskCreator");
   const taskCreator = await TaskCreator.deploy(factory.address, automate);
   await taskCreator.deployed();
   console.log("TaskCreator deployed to:", taskCreator.address);
-  // const taskCreator = { address: TASK_CREATOR_ADDRESS };
+  // const taskCreator = { address: CONFIG.TASK_CREATOR_ADDRESS };
 
   const CopyWallet = await ethers.getContractFactory("CopyWalletSNXv3");
   const implementation = await CopyWallet.deploy({
@@ -59,7 +53,7 @@ async function main() {
   });
   console.log("CopyWallet Implementation deployed to:", implementation.address);
   // const implementation = {
-  //   address: IMPLEMENTATION_ADDRESS,
+  //   address: CONFIG.IMPLEMENTATION_ADDRESS,
   // };
 
   await new Promise((resolve) =>

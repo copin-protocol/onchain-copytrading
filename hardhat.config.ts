@@ -38,6 +38,60 @@ const config: HardhatUserConfig = {
         process.env.PRIVATE_KEY_3!,
       ],
     },
+    opSepolia: {
+      url: process.env.OP_SEPOLIA_NODE_URL,
+      accounts: [
+        process.env.PRIVATE_KEY_1!,
+        process.env.PRIVATE_KEY_2!,
+        process.env.PRIVATE_KEY_3!,
+      ],
+      ...{
+        RELAYER_API_KEY: process.env.RELAYER_API_KEY!,
+        RELAYER_API_SECRET: process.env.RELAYER_API_SECRET!,
+        USD_ASSET: "0xD7D674d80e79CF3A3b67D6a510AC1B0493dF47cF",
+        AUTOMATE: "0x2A6C106ae13B558BB9E2Ec64Bd2f1f7BEFF3A5E0",
+        EXECUTOR: "0xdDAf82aD2ceF6dDAB6170C46111398d7622eE829",
+        FACTORY_ADDRESS: "0x329b3599e51B992879349C0388D29a5B06861B0B",
+        EVENTS_ADDRESS: "0xD4c8b3710d399c1810e48365727FD28bD4ec0314",
+        CONFIGS_ADDRESS: "0x21fb9EB59E29639A2c8DF595Ae20458231e1f7b5",
+        TASK_CREATOR_ADDRESS: "0xa87959E220643ba53fA22004d2339C0B754a8F5E",
+        IMPLEMENTATION_ADDRESS: "0xdfe5c95e004Eb2219AAf57B156d44f74E089bde9",
+        SMART_WALLET_ADDRESS: "0xe3142E19bEaB8b69B3F1267D3C9A91E14C8ead0b",
+        ETH_MARKET_KEY:
+          "0x7345544850455250000000000000000000000000000000000000000000000000",
+        SNX_EXCHANGE_RATE: "0xBDA9863eFC244692816814E686Bd3A94aEc604Ad",
+        SNX_MARKET_MANAGER: "0x00D79DBB8e9fC344C015ADD2D4135E5181b61e66",
+        SNX_SYSTEM_STATUS: "0x247814db4369f8E952F60A6409C16A928672dcc6",
+      },
+      // gasPrice: 60,
+    },
+    op: {
+      url: process.env.OP_NODE_URL,
+      accounts: [
+        process.env.PRIVATE_KEY_1!,
+        process.env.PRIVATE_KEY_2!,
+        process.env.PRIVATE_KEY_3!,
+      ],
+      ...{
+        RELAYER_API_KEY: process.env.RELAYER_API_KEY!,
+        RELAYER_API_SECRET: process.env.RELAYER_API_SECRET!,
+        USD_ASSET: "0x8c6f28f2f1a3c87f0f938b96d27520d9751ec8d9",
+        AUTOMATE: "0x2A6C106ae13B558BB9E2Ec64Bd2f1f7BEFF3A5E0",
+        EXECUTOR: "0xff039C7BcE77CadE4766101d4148e0326044F30B",
+        FACTORY_ADDRESS: "",
+        EVENTS_ADDRESS: "",
+        CONFIGS_ADDRESS: "",
+        TASK_CREATOR_ADDRESS: "",
+        IMPLEMENTATION_ADDRESS: "",
+        SMART_WALLET_ADDRESS: "",
+        ETH_MARKET_KEY:
+          "0x7345544850455250000000000000000000000000000000000000000000000000",
+
+        SNX_EXCHANGE_RATE: "0x2C15259D4886e2C0946f9aB7a5E389c86b3c3b04",
+        SNX_MARKET_MANAGER: "0xd30bdFd7e7a65fE109D5dE1D4e95F3B800FB7463",
+        SNX_SYSTEM_STATUS: "0xE8c41bE1A167314ABAF2423b72Bf8da826943FFD",
+      },
+    },
     baseSepolia: {
       url: process.env.BASE_SEPOLIA_NODE_URL,
       accounts: [
@@ -130,10 +184,10 @@ const config: HardhatUserConfig = {
       },
       {
         network: "optimisticEthereum",
-        chainId: 420,
+        chainId: 11155420,
         urls: {
-          apiURL: "https://api-goerli-optimism.etherscan.io/api",
-          browserURL: "https://goerli-optimism.etherscan.io",
+          apiURL: "https://api-sepolia-optimism.etherscan.io/api",
+          browserURL: "https://sepolia-optimism.etherscan.io",
         },
       },
     ],

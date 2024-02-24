@@ -52,8 +52,12 @@ contract CopyWalletSNXv2 is CopyWallet, ICopyWalletSNXv2 {
                 address(this)
             );
 
+        if (position.size != 0 && _source != _positions[uint256(uint160(_market))].source) {
+            revert SourceMismatch();
+        }
+
         if (
-            !_isSameSign(_sizeDelta, position.size) &&
+            position.size != 0 && !_isSameSign(_sizeDelta, position.size) &&
             _abs(_sizeDelta) > _abs(position.size)
         ) {
             // reduce only
@@ -93,12 +97,15 @@ contract CopyWalletSNXv2 is CopyWallet, ICopyWalletSNXv2 {
     }
 
     function _perpWithdrawAllMargin(bytes calldata _inputs) internal override {
-        address[] memory markets;
-        assembly {
-            markets := calldataload(_inputs.offset)
-        }
-        for (uint8 i = 0; i < markets.length; i++) {
-            IPerpsV2MarketConsolidated(markets[i]).withdrawAllMargin();
+        require(_inputs.length % 0x20 == 0, "Invalid input length");
+        uint256 length = _inputs.length / 0x20;
+
+        for (uint256 i = 0; i < length; i++) {
+            address market;
+            assembly {
+                market := calldataload(add(_inputs.offset, mul(i, 0x20)))
+            }
+           IPerpsV2MarketConsolidated(market).withdrawAllMargin();
         }
     }
 
@@ -142,6 +149,10 @@ contract CopyWalletSNXv2 is CopyWallet, ICopyWalletSNXv2 {
             source := calldataload(_inputs.offset)
             market := calldataload(add(_inputs.offset, 0x20))
             acceptablePrice := calldataload(add(_inputs.offset, 0x40))
+        }
+
+        if (source != _positions[uint256(uint160(market))].source) {
+            revert SourceMismatch();
         }
 
         IPerpsV2MarketConsolidated.Position

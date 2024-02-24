@@ -1,12 +1,6 @@
 import { ethers, network, run } from "hardhat";
 import { SNXv3NetworkConfig } from "../../utils/types/config";
-import {
-  CONFIGS_ADDRESS,
-  EVENTS_ADDRESS,
-  FACTORY_ADDRESS,
-  IMPLEMENTATION_ADDRESS,
-  TASK_CREATOR_ADDRESS,
-} from "../../utils/constants";
+import { CONFIG } from "../../utils/constants";
 
 async function main() {
   const usdAsset = (network.config as SNXv3NetworkConfig).USD_ASSET;
@@ -18,12 +12,12 @@ async function main() {
 
   const [wallet] = await ethers.getSigners();
 
-  const factory = { address: FACTORY_ADDRESS };
-  const events = { address: EVENTS_ADDRESS };
-  const configs = { address: CONFIGS_ADDRESS };
-  const taskCreator = { address: TASK_CREATOR_ADDRESS };
+  const factory = { address: CONFIG.FACTORY_ADDRESS };
+  const events = { address: CONFIG.EVENTS_ADDRESS };
+  const configs = { address: CONFIG.CONFIGS_ADDRESS };
+  const taskCreator = { address: CONFIG.TASK_CREATOR_ADDRESS };
   const implementation = {
-    address: IMPLEMENTATION_ADDRESS,
+    address: CONFIG.IMPLEMENTATION_ADDRESS,
   };
 
   await run("verify:verify", {

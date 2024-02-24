@@ -1,10 +1,10 @@
 import { formatEther, parseEther } from "@ethersproject/units";
 import { ethers, network } from "hardhat";
 import { abi as copyWalletAbi } from "../artifacts/contracts/CopyWalletSNXv3.sol/CopyWalletSNXv3.json";
-import { Command, SMART_WALLET_ADDRESS } from "../utils/constants";
+import { Command, CONFIG } from "../utils/constants";
 import { SNXv3NetworkConfig } from "../utils/types/config";
-import perpsMarketAbi from "../utils/abis/perpsMarketAbi";
-import { calculateAcceptablePrice } from "../utils/perps";
+import perpsMarketAbi from "../utils/abis/perpsV3MarketAbi";
+import { calculateAcceptablePrice } from "../utils/snxV3";
 import { getRelaySigner } from "../utils/relay";
 
 const abiDecoder = ethers.utils.defaultAbiCoder;
@@ -15,11 +15,11 @@ async function main() {
   const signer = getRelaySigner();
 
   const demoSource = {
-    address: SMART_WALLET_ADDRESS,
+    address: CONFIG.SMART_WALLET_ADDRESS,
   };
 
   const copyWallet = new ethers.Contract(
-    SMART_WALLET_ADDRESS,
+    CONFIG.SMART_WALLET_ADDRESS,
     copyWalletAbi,
     signer as any
   );

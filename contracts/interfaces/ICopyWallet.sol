@@ -65,6 +65,8 @@ interface ICopyWallet {
 
     error NoTaskFound();
 
+    error SourceMismatch();
+
     error CannotExecuteTask(uint256 taskId, address executor);
 
     function VERSION() external view returns (bytes32);
@@ -82,6 +84,8 @@ interface ICopyWallet {
     function checker(
         uint256 _taskId
     ) external view returns (bool canExec, bytes memory execPayload);
+
+    function positions(uint256 _key) external view returns (Position memory);
 
     function getTask(uint256 _taskId) external view returns (Task memory);
 

@@ -1,6 +1,7 @@
 import { ethers } from "hardhat";
 import gelato1BalanceAbi from "../utils/abis/gelato1BalanceAbi";
 import { parseEther } from "ethers/lib/utils";
+import { CONFIG } from "../utils/constants";
 
 // ONLY RUN ON GOERLI AND POLYGON!!!
 async function main() {
@@ -10,7 +11,7 @@ async function main() {
     gelato1BalanceAbi,
     wallet1 as any
   );
-  const tx = await gelato1Balance.depositNative("", {
+  const tx = await gelato1Balance.depositNative(CONFIG.TASK_CREATOR_ADDRESS, {
     value: parseEther("0.05"),
   });
   console.log(tx);

@@ -1,10 +1,11 @@
 import { Defender } from "@openzeppelin/defender-sdk";
-import { RELAYER_API_KEY, RELAYER_API_SECRET } from "./constants";
+import { CONFIG } from "./constants";
 
 export const getRelaySigner = () => {
+  console.log("CONFIG.RELAYER_API_KEY", CONFIG.RELAYER_API_KEY);
   const credentials = {
-    relayerApiKey: RELAYER_API_KEY,
-    relayerApiSecret: RELAYER_API_SECRET,
+    relayerApiKey: CONFIG.RELAYER_API_KEY,
+    relayerApiSecret: CONFIG.RELAYER_API_SECRET,
   };
   const client = new Defender(credentials);
   const provider = client.relaySigner.getProvider();

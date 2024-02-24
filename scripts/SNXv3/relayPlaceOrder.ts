@@ -1,15 +1,11 @@
 import { formatEther, parseEther } from "@ethersproject/units";
 import { ethers, network } from "hardhat";
 import { abi as copyWalletAbi } from "../../artifacts/contracts/CopyWalletSNXv3.sol/CopyWalletSNXv3.json";
-import {
-  Command,
-  SNX_V3_MARKET_IDS,
-  SMART_WALLET_ADDRESS,
-} from "../../utils/constants";
+import { Command, SNX_V3_MARKET_IDS, CONFIG } from "../../utils/constants";
 import { SNXv3NetworkConfig } from "../../utils/types/config";
-import perpsMarketAbi from "../../utils/abis/perpsMarketAbi";
+import perpsMarketAbi from "../../utils/abis/perpsV3MarketAbi";
 import { BigNumber } from "ethers";
-import { calculateAcceptablePrice, getTradeSign } from "../../utils/perps";
+import { calculateAcceptablePrice, getTradeSign } from "../../utils/snxV3";
 import { getRelaySigner } from "../../utils/relay";
 
 const abiDecoder = ethers.utils.defaultAbiCoder;
@@ -18,12 +14,12 @@ async function main() {
   const signer = getRelaySigner();
 
   const demoSource = {
-    address: SMART_WALLET_ADDRESS,
+    address: CONFIG.SMART_WALLET_ADDRESS,
     // address: "0x1aA25aBC0f3A29d017638ec9Ba02668921F91016",
   };
 
   const copyWallet = new ethers.Contract(
-    SMART_WALLET_ADDRESS,
+    CONFIG.SMART_WALLET_ADDRESS,
     copyWalletAbi,
     signer as any
   );
@@ -48,7 +44,7 @@ async function main() {
   console.log("accountId", accountId.toString());
   const indexPrice = await perpsMarket.indexPrice("100");
   console.log(indexPrice.toString());
-  return;
+
   const sizeDelta = amount
     .mul(leverage)
     .mul(BigNumber.from(10).pow(18))

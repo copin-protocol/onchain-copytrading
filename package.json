@@ -1,10 +1,17 @@
 {
   "name": "onchain-copytrading",
   "scripts": {
-    "deploy:snx:testnet": "npx hardhat run --network testnet scripts/build/deploySNX.ts",
-    "verify:snx:testnet": "npx hardhat run --network testnet scripts/build/verifySNX.ts",
-    "deploy:snx:mainnet": "npx hardhat run --network mainnet scripts/build/deploySNX.ts",
-    "verify:snx:mainnet": "npx hardhat run --network mainnet scripts/build/verifySNX.ts",
+    "deploy:snx:baseSepolia": "npx hardhat run --network baseSepolia scripts/SNXv3/deploy.ts",
+    "verify:snx:baseSepolia": "npx hardhat run --network baseSepolia scripts/SNXv3/verify.ts",
+    "deploy:snx:base": "npx hardhat run --network base scripts/SNXv3/deploy.ts",
+    "verify:snx:base": "npx hardhat run --network base scripts/SNXv3/verify.ts",
+    "deploy:snx:opSepolia": "npx hardhat run --network opSepolia scripts/SNXv2/deploy.ts",
+    "verify:snx:opSepolia": "npx hardhat run --network opSepolia scripts/SNXv2/verify.ts",
+    "place:snx:opSepolia": "npx hardhat run --network opSepolia scripts/SNXv2/relayPlaceOrder.ts",
+    "execute:snx:opSepolia": "npx hardhat run --network opSepolia scripts/SNXv2/relayExecuteOrder.ts",
+    "close:snx:opSepolia": "npx hardhat run --network opSepolia scripts/SNXv2/relayCloseOrder.ts",
+    "deploy:snx:op": "npx hardhat run --network op scripts/SNXv2/deploy.ts",
+    "verify:snx:op": "npx hardhat run --network op scripts/SNXv2/verify.ts",
     "compile": "hardhat compile",
     "test": "hardhat test",
     "watch": "hardhat watch"
@@ -36,6 +43,7 @@
     "@gelatonetwork/relay-sdk": "5.0.0",
     "@openzeppelin/contracts": "4.9.5",
     "@openzeppelin/defender-sdk": "1.8.0",
+    "@pythnetwork/pyth-evm-js": "1.30.0",
     "@uniswap/v3-core": "1.0.0",
     "base64-sol": "1.1.0",
     "hardhat-watcher": "2.3.0"

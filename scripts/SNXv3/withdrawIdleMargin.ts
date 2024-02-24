@@ -2,7 +2,7 @@
 import { ethers, network } from "hardhat";
 import { abi as copyWalletAbi } from "../../artifacts/contracts/CopyWalletSNXv3.sol/CopyWalletSNXv3.json";
 import { abi as mockERC20 } from "../../artifacts/contracts/test/MockERC20.sol/MockERC20.json";
-import { Command, SMART_WALLET_ADDRESS } from "../../utils/constants";
+import { Command, CONFIG } from "../../utils/constants";
 import { getRelaySigner } from "../../utils/relay";
 // const { formatUnits } = require("ethers/lib/utils");
 
@@ -14,7 +14,7 @@ async function main() {
   const signer = getRelaySigner();
 
   const copyWallet = new ethers.Contract(
-    SMART_WALLET_ADDRESS,
+    CONFIG.SMART_WALLET_ADDRESS,
     copyWalletAbi,
     signer as any
   );
