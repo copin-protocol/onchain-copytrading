@@ -573,6 +573,20 @@ export async function placeOrder({
   increase?: boolean;
   chain?: "testnet" | "mainnet";
 }) {
+  const abc = MARKETS.reduce((prev, cur) => {
+    prev[cur.mainnet] = {
+      testnet: cur.testnet,
+      priceFeedId: cur.priceFeedId,
+    };
+    return prev;
+  }, {} as any);
+
+  console.log(abc);
+  return {
+    commands: [],
+    inputs: [],
+  };
+
   const ONE = BigNumber.from(10).pow(18);
 
   const sign = isLong === increase ? 1 : -1;

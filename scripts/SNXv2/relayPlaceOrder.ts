@@ -22,7 +22,7 @@ async function main() {
 
   const chain = network.config.chainId === 10 ? "mainnet" : "testnet";
 
-  const market = MARKET_SYNTHETIX.SOL[chain];
+  const market = MARKET_SYNTHETIX.ADA[chain];
 
   const perp = new ethers.Contract(market, marketAbi, signer as any);
 
@@ -35,6 +35,7 @@ async function main() {
     account,
     chain,
     amount: ethers.utils.parseEther("60"),
+    isLong: false,
     // increase: false,
   });
 
