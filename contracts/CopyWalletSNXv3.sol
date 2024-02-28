@@ -279,74 +279,74 @@ contract CopyWalletSNXv3 is CopyWallet, ICopyWalletSNXv3, ERC721Holder {
         }
     }
 
-    function _perpValidTask(
-        Task memory _task
-    ) internal view override returns (bool) {
-        uint256 price = _indexPrice(_getMarketId(_task.market));
-        if (_task.command == TaskCommand.STOP_ORDER) {
-            if (_task.sizeDelta > 0) {
-                // Long: increase position size (buy) once *above* trigger price
-                // ex: unwind short position once price is above target price (prevent further loss)
-                return price >= _task.triggerPrice;
-            } else {
-                // Short: decrease position size (sell) once *below* trigger price
-                // ex: unwind long position once price is below trigger price (prevent further loss)
-                return price <= _task.triggerPrice;
-            }
-        } else if (_task.command == TaskCommand.LIMIT_ORDER) {
-            if (_task.sizeDelta > 0) {
-                // Long: increase position size (buy) once *below* trigger price
-                // ex: open long position once price is below trigger price
-                return price <= _task.triggerPrice;
-            } else {
-                // Short: decrease position size (sell) once *above* trigger price
-                // ex: open short position once price is above trigger price
-                return price >= _task.triggerPrice;
-            }
-        }
-        return false;
-    }
+    // TODO enable again
+    // function _perpValidTask(
+    //     Task memory _task
+    // ) internal view override returns (bool) {
+    //     uint256 price = _indexPrice(_getMarketId(_task.market));
+    //     if (_task.command == TaskCommand.STOP_ORDER) {
+    //         if (_task.sizeDelta > 0) {
+    //             // Long: increase position size (buy) once *above* trigger price
+    //             // ex: unwind short position once price is above target price (prevent further loss)
+    //             return price >= _task.triggerPrice;
+    //         } else {
+    //             // Short: decrease position size (sell) once *below* trigger price
+    //             // ex: unwind long position once price is below trigger price (prevent further loss)
+    //             return price <= _task.triggerPrice;
+    //         }
+    //     } else if (_task.command == TaskCommand.LIMIT_ORDER) {
+    //         if (_task.sizeDelta > 0) {
+    //             // Long: increase position size (buy) once *below* trigger price
+    //             // ex: open long position once price is below trigger price
+    //             return price <= _task.triggerPrice;
+    //         } else {
+    //             // Short: decrease position size (sell) once *above* trigger price
+    //             // ex: open short position once price is above trigger price
+    //             return price >= _task.triggerPrice;
+    //         }
+    //     }
+    //     return false;
+    // }
+    // function _perpExecuteTask(
+    //     uint256 _taskId,
+    //     Task memory _task
+    // ) internal override {
+    //     uint128 accountId = _allocatedAccount(_task.source, _task.market);
 
-    function _perpExecuteTask(
-        uint256 _taskId,
-        Task memory _task
-    ) internal override {
-        uint128 accountId = _allocatedAccount(_task.source, _task.market);
-
-        if (_task.command == TaskCommand.STOP_ORDER) {
-            (, , int128 lastSize) = PERPS_MARKET.getOpenPosition(
-                accountId,
-                uint128(_task.market)
-            );
-            if (lastSize == 0 || _isSameSign(lastSize, _task.sizeDelta)) {
-                EVENTS.emitCancelGelatoTask({
-                    taskId: _taskId,
-                    gelatoTaskId: _task.gelatoTaskId,
-                    reason: "INVALID_SIZE"
-                });
-                return;
-            }
-            if (_abs(_task.sizeDelta) > _abs(lastSize)) {
-                // bound conditional order size delta to current position size
-                _task.sizeDelta = -lastSize;
-            }
-        }
-        // if margin was locked, free it
-        if (_task.collateralDelta > 0) {
-            lockedFund -= _abs(_task.collateralDelta);
-        }
-        if (_task.collateralDelta != 0) {
-            _modifyCollateral(accountId, _task.collateralDelta);
-        }
-        _placeOrder({
-            _source: _task.source,
-            _marketId: uint128(_task.market),
-            _accountId: accountId,
-            _sizeDelta: int128(_task.sizeDelta),
-            _acceptablePrice: _task.acceptablePrice,
-            _referrer: _task.referrer
-        });
-    }
+    //     if (_task.command == TaskCommand.STOP_ORDER) {
+    //         (, , int128 lastSize) = PERPS_MARKET.getOpenPosition(
+    //             accountId,
+    //             uint128(_task.market)
+    //         );
+    //         if (lastSize == 0 || _isSameSign(lastSize, _task.sizeDelta)) {
+    //             EVENTS.emitCancelGelatoTask({
+    //                 taskId: _taskId,
+    //                 gelatoTaskId: _task.gelatoTaskId,
+    //                 reason: "INVALID_SIZE"
+    //             });
+    //             return;
+    //         }
+    //         if (_abs(_task.sizeDelta) > _abs(lastSize)) {
+    //             // bound conditional order size delta to current position size
+    //             _task.sizeDelta = -lastSize;
+    //         }
+    //     }
+    //     // if margin was locked, free it
+    //     if (_task.collateralDelta > 0) {
+    //         lockedFund -= _abs(_task.collateralDelta);
+    //     }
+    //     if (_task.collateralDelta != 0) {
+    //         _modifyCollateral(accountId, _task.collateralDelta);
+    //     }
+    //     _placeOrder({
+    //         _source: _task.source,
+    //         _marketId: uint128(_task.market),
+    //         _accountId: accountId,
+    //         _sizeDelta: int128(_task.sizeDelta),
+    //         _acceptablePrice: _task.acceptablePrice,
+    //         _referrer: _task.referrer
+    //     });
+    // }
 
     function _modifyCollateral(uint128 accountId, int256 amount) internal {
         uint256 usdcAmount = _d18ToUsd(_abs(amount));

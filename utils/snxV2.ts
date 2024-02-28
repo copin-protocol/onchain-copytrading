@@ -6,6 +6,7 @@ import { formatEther } from "@ethersproject/units";
 import perpsV2MarketAbi from "./abis/perpsV2MarketAbi";
 import { EvmPriceServiceConnection } from "@pythnetwork/pyth-evm-js";
 import { Call, multicall } from "./multicall";
+import { calculateAcceptablePrice } from "./calculate";
 
 const abi = ethers.utils.defaultAbiCoder;
 
@@ -539,17 +540,6 @@ export const MARKET_SYNTHETIX: {
 
 const MARKETS = Object.values(MARKET_SYNTHETIX);
 
-export const calculateDesiredFillPrice = (
-  marketPrice: BigNumber,
-  sizeDeltaPos: boolean
-) => {
-  const oneBN = ethers.utils.parseEther("1");
-  const priceImpactDecimalPct = oneBN.div(100);
-  return sizeDeltaPos
-    ? marketPrice.mul(priceImpactDecimalPct.add(oneBN)).div(oneBN)
-    : marketPrice.mul(oneBN.sub(priceImpactDecimalPct)).div(oneBN);
-};
-
 export const DEFAULT_AMOUNT = ethers.utils.parseEther("60");
 
 export async function placeOrder({
@@ -573,20 +563,6 @@ export async function placeOrder({
   increase?: boolean;
   chain?: "testnet" | "mainnet";
 }) {
-  const abc = MARKETS.reduce((prev, cur) => {
-    prev[cur.mainnet] = {
-      testnet: cur.testnet,
-      priceFeedId: cur.priceFeedId,
-    };
-    return prev;
-  }, {} as any);
-
-  console.log(abc);
-  return {
-    commands: [],
-    inputs: [],
-  };
-
   const ONE = BigNumber.from(10).pow(18);
 
   const sign = isLong === increase ? 1 : -1;
@@ -634,7 +610,7 @@ export async function placeOrder({
   );
 
   // sizeDelta positive
-  const acceptablePrice = calculateDesiredFillPrice(
+  const acceptablePrice = calculateAcceptablePrice(
     priceInfo.price,
     Number(ethers.utils.formatEther(amount)) / sign > 0
   );
@@ -856,7 +832,7 @@ export async function closeOrder({
 
   if (position.size.isZero()) throw Error("No opening position");
   // sizeDelta negative
-  const desiredFillPrice = calculateDesiredFillPrice(
+  const desiredFillPrice = calculateAcceptablePrice(
     priceInfo.price,
     position.size.gt(0) ? false : true
   );
