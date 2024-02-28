@@ -3,13 +3,13 @@ pragma solidity 0.8.18;
 
 import {ICopyWallet} from "contracts/interfaces/ICopyWallet.sol";
 import {IConfigs} from "contracts/interfaces/IConfigs.sol";
-import {ICopyWalletGMXv2} from "contracts/interfaces/ICopyWalletGMXv2.sol";
+import {ICopyWalletGMXv1} from "contracts/interfaces/ICopyWalletGMXv1.sol";
 import {CopyWallet} from "contracts/core/CopyWallet.sol";
-import {IRouter} from "contracts/interfaces/GMXv2/IRouter.sol";
-import {IPositionRouter} from "contracts/interfaces/GMXv2/IPositionRouter.sol";
-import {IVault} from "contracts/interfaces/GMXv2/IVault.sol";
+import {IRouter} from "contracts/interfaces/GMXv1/IRouter.sol";
+import {IPositionRouter} from "contracts/interfaces/GMXv1/IPositionRouter.sol";
+import {IVault} from "contracts/interfaces/GMXv1/IVault.sol";
 
-contract CopyWalletGMXv2 is CopyWallet, ICopyWalletGMXv2 {
+contract CopyWalletGMXv1 is CopyWallet, ICopyWalletGMXv1 {
     IRouter internal immutable ROUTER;
     IPositionRouter internal immutable POSITION_ROUTER;
     IVault internal immutable VAULT;

@@ -1,6 +1,6 @@
 import { network } from "hardhat";
 import {
-  GMXv2NetworkConfig,
+  GMXv1NetworkConfig,
   SNXv2NetworkConfig,
   SNXv3NetworkConfig,
 } from "./types/config";
@@ -8,7 +8,7 @@ import {
 export const CONFIG = network.config as
   | SNXv3NetworkConfig
   | SNXv2NetworkConfig
-  | GMXv2NetworkConfig;
+  | GMXv1NetworkConfig;
 
 export const PROTOCOL_FEE = 4000;
 

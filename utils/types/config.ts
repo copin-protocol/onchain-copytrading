@@ -28,7 +28,7 @@ export type SNXv2NetworkConfig = CopinConfig & {
   SNX_SYSTEM_STATUS: string;
 };
 
-export type GMXv2NetworkConfig = CopinConfig & {
+export type GMXv1NetworkConfig = CopinConfig & {
   ROUTER: string;
   POSITION_ROUTER: string;
   VAULT: string;

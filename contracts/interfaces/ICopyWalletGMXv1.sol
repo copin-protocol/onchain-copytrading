@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
 
-interface ICopyWalletGMXv2 {
+interface ICopyWalletGMXv1 {
     error ExecutionFeeNotEnough();
     struct ConstructorParams {
         address factory;

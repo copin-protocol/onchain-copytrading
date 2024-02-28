@@ -2,7 +2,7 @@
 import { ethers, network } from "hardhat";
 import { abi as accountAbi } from "../../artifacts/contracts/CopyWalletSNXv2.sol/CopyWalletSNXv2.json";
 import {
-  GMXv2NetworkConfig,
+  GMXv1NetworkConfig,
   SNXv2NetworkConfig,
 } from "../../utils/types/config";
 import marketAbi from "../../utils/abis/perpsV2MarketAbi";
@@ -27,13 +27,13 @@ async function main() {
   console.log("account", account.address);
 
   const positionRouter = new ethers.Contract(
-    (CONFIG as GMXv2NetworkConfig).POSITION_ROUTER,
+    (CONFIG as GMXv1NetworkConfig).POSITION_ROUTER,
     gmxPositionRouterAbi,
     signer as any
   );
 
   const vault = new ethers.Contract(
-    (CONFIG as GMXv2NetworkConfig).VAULT,
+    (CONFIG as GMXv1NetworkConfig).VAULT,
     gmxVaultAbi,
     signer as any
   );

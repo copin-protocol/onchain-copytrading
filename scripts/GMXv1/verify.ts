@@ -1,17 +1,17 @@
 import { ethers, network, run } from "hardhat";
 import {
-  GMXv2NetworkConfig,
+  GMXv1NetworkConfig,
   SNXv3NetworkConfig,
 } from "../../utils/types/config";
 import { CONFIG } from "../../utils/constants";
 
 async function main() {
-  const usdAsset = (network.config as GMXv2NetworkConfig).USD_ASSET;
-  const router = (network.config as GMXv2NetworkConfig).ROUTER;
-  const positionRouter = (network.config as GMXv2NetworkConfig).POSITION_ROUTER;
-  const vault = (network.config as GMXv2NetworkConfig).VAULT;
-  const weth = (network.config as GMXv2NetworkConfig).WETH;
-  const automate = (network.config as GMXv2NetworkConfig).AUTOMATE;
+  const usdAsset = (network.config as GMXv1NetworkConfig).USD_ASSET;
+  const router = (network.config as GMXv1NetworkConfig).ROUTER;
+  const positionRouter = (network.config as GMXv1NetworkConfig).POSITION_ROUTER;
+  const vault = (network.config as GMXv1NetworkConfig).VAULT;
+  const weth = (network.config as GMXv1NetworkConfig).WETH;
+  const automate = (network.config as GMXv1NetworkConfig).AUTOMATE;
   const [wallet] = await ethers.getSigners();
 
   const factory = { address: CONFIG.FACTORY_ADDRESS };
