@@ -19,6 +19,7 @@ const abi = ethers.utils.defaultAbiCoder;
 
 async function main() {
   const signer = getRelaySigner();
+  CONFIG.SMART_WALLET_ADDRESS = "0xfe4A52967092806d12A8AD6e30119930e8D10098";
   const account = new ethers.Contract(
     CONFIG.SMART_WALLET_ADDRESS,
     accountAbi,
@@ -40,8 +41,8 @@ async function main() {
 
   // const position = await vault.getPosition(
   //   CONFIG.SMART_WALLET_ADDRESS,
-  //   "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
-  //   "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+  //   "0xf97f4df75117a78c1A5a0DBb814Af92458539FB4",
+  //   "0xf97f4df75117a78c1A5a0DBb814Af92458539FB4",
   //   true
   // );
 
@@ -52,7 +53,7 @@ async function main() {
 
   // return;
 
-  const market = "0xf97f4df75117a78c1A5a0DBb814Af92458539FB4";
+  const market = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1";
   const isLong = false;
 
   const minExecutionFee = await positionRouter.minExecutionFee();
@@ -82,7 +83,7 @@ async function main() {
     ],
     {
       value: minExecutionFee.mul(120).div(100),
-      // gasLimit: 2000000,
+      // gasLimit: 3000000,
     }
   );
   console.log("tx", tx);

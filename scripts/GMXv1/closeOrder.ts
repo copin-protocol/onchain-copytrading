@@ -18,56 +18,47 @@ import gmxVaultAbi from "../../utils/abis/gmxVaultAbi";
 const abi = ethers.utils.defaultAbiCoder;
 
 async function main() {
-  const signer = getRelaySigner();
-  CONFIG.SMART_WALLET_ADDRESS = "0xfe4A52967092806d12A8AD6e30119930e8D10098";
+  const [, wallet2] = await ethers.getSigners();
   const account = new ethers.Contract(
     CONFIG.SMART_WALLET_ADDRESS,
     accountAbi,
-    signer as any
+    wallet2 as any
   );
   console.log("account", account.address);
 
   const positionRouter = new ethers.Contract(
     (CONFIG as GMXv1NetworkConfig).POSITION_ROUTER,
     gmxPositionRouterAbi,
-    signer as any
+    wallet2 as any
   );
 
   const vault = new ethers.Contract(
     (CONFIG as GMXv1NetworkConfig).VAULT,
     gmxVaultAbi,
-    signer as any
+    wallet2 as any
   );
 
-  // const postion = await account.positions(
-  //   BigNumber.from("0x82aF49447D8a07e3bd95BD0d56f35241523fBab1")
+  // const position = await vault.getPosition(
+  //   CONFIG.SMART_WALLET_ADDRESS,
+  //   "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+  //   "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+  //   true
   // );
 
   // console.log(
-  //   "postion",
-  //   postion.map((e: any) => e.toString())
+  //   "position",
+  //   position.map((e: any) => e.toString())
   // );
-
-  // const executorUsdFee = await account.executorUsdFee(
-  //   ethers.utils.parseEther("1").div(5000)
-  // );
-
-  // console.log("executorUsdFee", executorUsdFee.toString());
 
   // return;
 
-  const market = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1";
-  const isLong = false;
-  const isIncrease = true;
-  const collateral = ethers.utils.parseUnits("30", 6);
-  const sizeUsd = ethers.utils.parseEther("300");
+  const market = "0xf97f4df75117a78c1A5a0DBb814Af92458539FB4";
+  const isLong = true;
 
   const minExecutionFee = await positionRouter.minExecutionFee();
   console.log("minExecutionFee", ethers.utils.formatEther(minExecutionFee));
 
-  const priceFn = (isIncrease ? isLong : !isLong)
-    ? vault.getMaxPrice
-    : vault.getMinPrice;
+  const priceFn = !isLong ? vault.getMaxPrice : vault.getMinPrice;
 
   const priceD30 = await priceFn(market);
   const price = priceD30.div(ethers.BigNumber.from(10).pow(12));
@@ -77,24 +68,21 @@ async function main() {
   // return;
 
   const tx = await account.execute(
-    [Command.PERP_PLACE_ORDER],
+    [Command.PERP_CLOSE_ORDER],
     [
       abi.encode(
-        ["address", "address", "bool", "bool", "uint256", "uint256", "uint256"],
+        ["address", "address", "bool", "uint256"],
         [
-          "0xBe9F2e6537Fde4c7b010754c83ef6644b6eb9994",
+          CONFIG.SMART_WALLET_ADDRESS,
           market,
           isLong,
-          isIncrease,
-          collateral,
-          sizeUsd,
-          calculateAcceptablePrice(price, isIncrease ? isLong : !isLong),
+          calculateAcceptablePrice(price, !isLong),
         ]
       ),
     ],
     {
       value: minExecutionFee.mul(120).div(100),
-      // gasLimit: 2000000,
+      // gasLimit: 3000000,
     }
   );
   console.log("tx", tx);
