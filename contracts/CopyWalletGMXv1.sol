@@ -10,10 +10,15 @@ import {IPositionRouter} from "contracts/interfaces/GMXv1/IPositionRouter.sol";
 import {IVault} from "contracts/interfaces/GMXv1/IVault.sol";
 
 contract CopyWalletGMXv1 is CopyWallet, ICopyWalletGMXv1 {
+
+    /* ========== IMMUTABLES ========== */
+
     IRouter internal immutable ROUTER;
     IPositionRouter internal immutable POSITION_ROUTER;
     IVault internal immutable VAULT;
     address internal immutable weth;
+
+    /* ========== CONSTRUCTOR ========== */
 
     constructor(
         ConstructorParams memory _params
@@ -35,97 +40,18 @@ contract CopyWalletGMXv1 is CopyWallet, ICopyWalletGMXv1 {
         weth = _params.weth;
     }
 
+    /* ========== VIEWS ========== */
+
     function executorUsdFee(
         uint256 _fee
     ) public view override returns (uint256) {
         return _tokenToUsd(_fee, weth);
     }
 
+    /* ========== PERPS ========== */
+
     function _perpInit() internal override {
         ROUTER.approvePlugin(address(POSITION_ROUTER));
-    }
-
-    function _placeOrder(
-        address _source,
-        address _market,
-        bool _isLong,
-        bool _isIncrease,
-        uint256 _collateralDelta,
-        uint256 _sizeUsdDelta,
-        uint256 _acceptablePrice
-    ) internal {
-        (uint256 sizeUsdD30,,uint256 averagePriceD30,,,,,) = VAULT.getPosition(address(this), _isLong ? _market : address(USD_ASSET), _market, _isLong);
-
-        uint256 executionFee = POSITION_ROUTER.minExecutionFee() * 120 / 100;
-        if (executionFee > msg.value) revert ExecutionFeeNotEnough();
-        uint256 executionFeeUsd = _tokenToUsd(executionFee, weth);
-        
-        if (_isIncrease) {
-            address[] memory path;
-            if (_isLong) {
-                path = new address[](2);
-                path[0] = address(USD_ASSET);
-                path[1] = _market;
-            } else {
-                path = new address[](1);    
-                path[0] = address(USD_ASSET);
-            }
-
-            if (_collateralDelta > 0) USD_ASSET.approve(address(ROUTER), _collateralDelta);
-
-            POSITION_ROUTER.createIncreasePosition{value: executionFee}({
-                _path: path,
-                _indexToken: _market,
-                _amountIn: _collateralDelta,
-                _minOut: 0,
-                _sizeDelta: _sizeUsdDelta * 10 ** 12,
-                _isLong: _isLong,
-                _acceptablePrice: _acceptablePrice * 10 ** 12,
-                _executionFee: executionFee,
-                _referralCode: TRACKING_CODE,
-                _callbackTarget: address(0)
-            });
-        } else {
-            address[] memory path;
-            if (_isLong) {
-                path = new address[](2);
-                path[0] = _market;
-                path[1] = address(USD_ASSET);
-            } else {
-                path = new address[](1);
-                path[0] = address(USD_ASSET);
-            }
-
-            POSITION_ROUTER.createDecreasePosition{value: executionFee}({
-                _path: path,
-                _indexToken: _market,
-                _collateralDelta: _usdToD18(_collateralDelta) * 10 ** 12,
-                _sizeDelta: _sizeUsdDelta * 10 ** 12,
-                _isLong: _isLong,
-                _receiver: address(this),
-                _acceptablePrice: _acceptablePrice * 10 ** 12,
-                _minOut: 0,
-                _executionFee: executionFee,
-                _withdrawETH: false,
-                _callbackTarget: address(0)
-            });
-        }
-        address feeReceiver = CONFIGS.feeReceiver();
-        USD_ASSET.transfer(feeReceiver, executionFeeUsd);
-        EVENTS.emitChargeExecutorFee({
-            executor: address(POSITION_ROUTER),
-            receiver: feeReceiver,
-            fee: executionFee,
-            feeUsd: executionFeeUsd
-        });
-        _postOrder({
-            _id: uint256(uint160(_market)),
-            _source: _source,
-            _lastSize: sizeUsdD30 > 0 && averagePriceD30 > 0 ? sizeUsdD30 * 1e18 / averagePriceD30 : 0,
-            _sizeDelta: _sizeUsdDelta * 10 ** 30 / _indexPriceD30(_market),
-            _price: _indexPrice(_market),
-            _isIncrease: _isIncrease
-        });
     }
 
     function _perpCancelOrder(bytes calldata _inputs) internal override {}
@@ -229,7 +155,92 @@ contract CopyWalletGMXv1 is CopyWallet, ICopyWalletGMXv1 {
         });
     }
 
-    // TODO enable again
+    function _placeOrder(
+        address _source,
+        address _market,
+        bool _isLong,
+        bool _isIncrease,
+        uint256 _collateralDelta,
+        uint256 _sizeUsdDelta,
+        uint256 _acceptablePrice
+    ) internal {
+        (uint256 sizeUsdD30,,uint256 averagePriceD30,,,,,) = VAULT.getPosition(address(this), _isLong ? _market : address(USD_ASSET), _market, _isLong);
+
+        uint256 executionFee = POSITION_ROUTER.minExecutionFee() * 120 / 100;
+        if (executionFee > msg.value) revert ExecutionFeeNotEnough();
+        uint256 executionFeeUsd = _tokenToUsd(executionFee, weth);
+        
+        if (_isIncrease) {
+            address[] memory path;
+            if (_isLong) {
+                path = new address[](2);
+                path[0] = address(USD_ASSET);
+                path[1] = _market;
+            } else {
+                path = new address[](1);    
+                path[0] = address(USD_ASSET);
+            }
+
+            if (_collateralDelta > 0) USD_ASSET.approve(address(ROUTER), _collateralDelta);
+
+            POSITION_ROUTER.createIncreasePosition{value: executionFee}({
+                _path: path,
+                _indexToken: _market,
+                _amountIn: _collateralDelta,
+                _minOut: 0,
+                _sizeDelta: _sizeUsdDelta * 10 ** 12,
+                _isLong: _isLong,
+                _acceptablePrice: _acceptablePrice * 10 ** 12,
+                _executionFee: executionFee,
+                _referralCode: TRACKING_CODE,
+                _callbackTarget: address(0)
+            });
+        } else {
+            address[] memory path;
+            if (_isLong) {
+                path = new address[](2);
+                path[0] = _market;
+                path[1] = address(USD_ASSET);
+            } else {
+                path = new address[](1);
+                path[0] = address(USD_ASSET);
+            }
+
+            POSITION_ROUTER.createDecreasePosition{value: executionFee}({
+                _path: path,
+                _indexToken: _market,
+                _collateralDelta: _usdToD18(_collateralDelta) * 10 ** 12,
+                _sizeDelta: _sizeUsdDelta * 10 ** 12,
+                _isLong: _isLong,
+                _receiver: address(this),
+                _acceptablePrice: _acceptablePrice * 10 ** 12,
+                _minOut: 0,
+                _executionFee: executionFee,
+                _withdrawETH: false,
+                _callbackTarget: address(0)
+            });
+        }
+        address feeReceiver = CONFIGS.feeReceiver();
+        USD_ASSET.transfer(feeReceiver, executionFeeUsd);
+        EVENTS.emitChargeExecutorFee({
+            executor: address(POSITION_ROUTER),
+            receiver: feeReceiver,
+            fee: executionFee,
+            feeUsd: executionFeeUsd
+        });
+        _postOrder({
+            _id: uint256(uint160(_market)),
+            _source: _source,
+            _lastSize: sizeUsdD30 > 0 && averagePriceD30 > 0 ? sizeUsdD30 * 1e18 / averagePriceD30 : 0,
+            _sizeDelta: _sizeUsdDelta * 10 ** 30 / _indexPriceD30(_market),
+            _price: _indexPrice(_market),
+            _isIncrease: _isIncrease
+        });
+    }
+
+    /* ========== TASKS ========== */
+
+    // TODO task
     // function _perpValidTask(
     //     Task memory _task
     // ) internal view override returns (bool) {
@@ -257,7 +268,6 @@ contract CopyWalletGMXv1 is CopyWallet, ICopyWalletGMXv1 {
     //     }
     //     return false;
     // }
-
     // function _perpExecuteTask(
     //     uint256 _taskId,
     //     Task memory _task
@@ -301,6 +311,8 @@ contract CopyWalletGMXv1 is CopyWallet, ICopyWalletGMXv1 {
     //         _acceptablePrice: _task.acceptablePrice
     //     });
     // }
+
+    /* ========== UTILITIES ========== */
 
     function _indexPrice(
         address _token
