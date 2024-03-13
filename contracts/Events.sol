@@ -144,7 +144,7 @@ contract Events is IEvents {
         uint256 fee
     ) external override onlyCopyWallets {
         emit GelatoTaskRunned({
-            account: msg.sender,
+            copyWallet: msg.sender,
             taskId: taskId,
             gelatoTaskId: gelatoTaskId,
             fillPrice: fillPrice,

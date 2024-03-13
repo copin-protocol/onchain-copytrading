@@ -129,7 +129,7 @@ interface IEvents {
     ) external;
 
     event GelatoTaskRunned(
-        address indexed account,
+        address indexed copyWallet,
         uint256 indexed taskId,
         bytes32 indexed gelatoTaskId,
         uint256 fillPrice,

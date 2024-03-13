@@ -22,22 +22,22 @@ async function main() {
     address: CONFIG.IMPLEMENTATION_ADDRESS,
   };
 
-  await run("verify:verify", {
-    address: factory.address,
-    constructorArguments: [wallet.address],
-  });
-  await run("verify:verify", {
-    address: events.address,
-    constructorArguments: [factory.address],
-  });
+  // await run("verify:verify", {
+  //   address: factory.address,
+  //   constructorArguments: [wallet.address],
+  // });
+  // await run("verify:verify", {
+  //   address: events.address,
+  //   constructorArguments: [factory.address],
+  // });
   await run("verify:verify", {
     address: configs.address,
     constructorArguments: [wallet.address],
   });
-  await run("verify:verify", {
-    address: taskCreator.address,
-    constructorArguments: [factory.address, automate],
-  });
+  // await run("verify:verify", {
+  //   address: taskCreator.address,
+  //   constructorArguments: [factory.address, automate],
+  // });
   await run("verify:verify", {
     address: implementation.address,
     constructorArguments: [
