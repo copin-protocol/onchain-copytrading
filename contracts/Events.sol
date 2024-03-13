@@ -5,7 +5,12 @@ import {ICopyWallet, IEvents} from "./interfaces/IEvents.sol";
 import {IFactory} from "./interfaces/IFactory.sol";
 
 contract Events is IEvents {
+
+    /* ========== STATE ========== */
+
     address public immutable factory;
+
+    /* ========== MODIFIER ========== */
 
     modifier onlyCopyWallets() {
         if (!IFactory(factory).accounts(msg.sender)) {
@@ -14,9 +19,13 @@ contract Events is IEvents {
         _;
     }
 
+     /* ========== CONSTRUCTOR ========== */
+
     constructor(address _factory) {
         factory = _factory;
     }
+
+    /* ========== EMIT ========== */
 
     function emitDeposit(
         address user,
