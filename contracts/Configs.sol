@@ -21,7 +21,7 @@ contract Configs is IConfigs, Owned {
     /* ========== SETTERS ========== */
 
     function setExecutorFee(uint256 _executorFee) external override onlyOwner {
-        require(_executorFee <= 1 ether / 2000, "Over max fee"); // maximum is 0.0005 ethers
+        require(_executorFee <= 1 ether / 1000, "Over max fee"); // maximum is 0.001 ethers
         executorFee = _executorFee;
         emit ExecutorFeeSet(_executorFee);
     }
