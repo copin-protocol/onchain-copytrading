@@ -6,13 +6,11 @@ Try running some of the following tasks:
 
 ```shell
 npm run compile
-npm run test
-npm run deploy:snx:testnet
+npm run deploy:snx:opSepolia
+npm run verify:snx:opSepolia
 npx hardhat run --network goerli scripts/deposit1Balance.ts
 npx hardhat run --network testnet scripts/newCopyWallet.ts
 npx hardhat run --network testnet scripts/modifyFund.ts
-npx hardhat run --network testnet scripts/relayPlaceOrder.ts
-npx hardhat run --network testnet scripts/relayCloseOrder.ts
-npx hardhat run --network testnet scripts/relayCreateTask.ts
-npx hardhat run --network testnet scripts/relayCancelTask.ts
+npx hardhat run --network testnet scripts/SNXv2/relayPlaceOrder.ts
+npx hardhat run --network testnet scripts/SNXv2/relayCloseOrder.ts
 ```
