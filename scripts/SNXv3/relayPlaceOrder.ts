@@ -5,8 +5,9 @@ import { Command, SNX_V3_MARKET_IDS, CONFIG } from "../../utils/constants";
 import { SNXv3NetworkConfig } from "../../utils/types/config";
 import perpsMarketAbi from "../../utils/abis/perpsV3MarketAbi";
 import { BigNumber } from "ethers";
-import { calculateAcceptablePrice, getTradeSign } from "../../utils/snxV3";
+import { getTradeSign } from "../../utils/snxV3";
 import { getRelaySigner } from "../../utils/relay";
+import { calculateAcceptablePrice } from "../../utils/calculate";
 
 const abiDecoder = ethers.utils.defaultAbiCoder;
 
@@ -184,7 +185,7 @@ async function main() {
         demoSource.address,
         SNX_V3_MARKET_IDS.ETH,
         sizeDelta,
-        calculateAcceptablePrice(fillPrice, sizeDelta),
+        calculateAcceptablePrice(fillPrice, sizeDelta.gt(0)),
         demoSource.address,
       ]
     )

@@ -5,7 +5,12 @@ import {ICopyWallet, IEvents} from "./interfaces/IEvents.sol";
 import {IFactory} from "./interfaces/IFactory.sol";
 
 contract Events is IEvents {
+
+    /* ========== STATE ========== */
+
     address public immutable factory;
+
+    /* ========== MODIFIER ========== */
 
     modifier onlyCopyWallets() {
         if (!IFactory(factory).accounts(msg.sender)) {
@@ -14,9 +19,13 @@ contract Events is IEvents {
         _;
     }
 
+     /* ========== CONSTRUCTOR ========== */
+
     constructor(address _factory) {
         factory = _factory;
     }
+
+    /* ========== EMIT ========== */
 
     function emitDeposit(
         address user,
@@ -135,7 +144,7 @@ contract Events is IEvents {
         uint256 fee
     ) external override onlyCopyWallets {
         emit GelatoTaskRunned({
-            account: msg.sender,
+            copyWallet: msg.sender,
             taskId: taskId,
             gelatoTaskId: gelatoTaskId,
             fillPrice: fillPrice,

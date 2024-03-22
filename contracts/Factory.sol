@@ -6,15 +6,20 @@ import {CopyWalletProxy} from "./CopyWalletProxy.sol";
 import {Owned} from "./utils/Owned.sol";
 
 contract Factory is IFactory, Owned {
-    bool public canUpgrade = true;
 
+    /* ========== STATE ========== */
+
+    bool public canUpgrade = true;
     address public implementation;
 
     mapping(address accounts => bool exist) public accounts;
-
     mapping(address owner => address[] accounts) internal ownerCopyWallets;
 
+    /* ========== CONSTRUCTOR ========== */
+
     constructor(address _owner) Owned(_owner) {}
+
+    /* ========== GETTERS ========== */
 
     function getCopyWalletOwner(
         address _account
@@ -32,6 +37,8 @@ contract Factory is IFactory, Owned {
     ) external view override returns (address[] memory) {
         return ownerCopyWallets[_owner];
     }
+
+    /* ========== MUTATES ========== */
 
     function updateCopyWalletOwnership(
         address _newOwner,
@@ -84,6 +91,8 @@ contract Factory is IFactory, Owned {
             version: abi.decode(data, (bytes32))
         });
     }
+
+    /* ========== UPGRADE ========== */
 
     function upgradeCopyWalletImplementation(
         address _implementation

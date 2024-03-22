@@ -6,6 +6,7 @@ import { formatEther } from "@ethersproject/units";
 import perpsV2MarketAbi from "./abis/perpsV2MarketAbi";
 import { EvmPriceServiceConnection } from "@pythnetwork/pyth-evm-js";
 import { Call, multicall } from "./multicall";
+import { calculateAcceptablePrice } from "./calculate";
 
 const abi = ethers.utils.defaultAbiCoder;
 
@@ -537,18 +538,7 @@ export const MARKET_SYNTHETIX: {
   },
 };
 
-const MARKETS = Object.values(MARKET_SYNTHETIX);
-
-export const calculateDesiredFillPrice = (
-  marketPrice: BigNumber,
-  sizeDeltaPos: boolean
-) => {
-  const oneBN = ethers.utils.parseEther("1");
-  const priceImpactDecimalPct = oneBN.div(100);
-  return sizeDeltaPos
-    ? marketPrice.mul(priceImpactDecimalPct.add(oneBN)).div(oneBN)
-    : marketPrice.mul(oneBN.sub(priceImpactDecimalPct)).div(oneBN);
-};
+export const MARKETS = Object.values(MARKET_SYNTHETIX);
 
 export const DEFAULT_AMOUNT = ethers.utils.parseEther("60");
 
@@ -573,20 +563,6 @@ export async function placeOrder({
   increase?: boolean;
   chain?: "testnet" | "mainnet";
 }) {
-  const abc = MARKETS.reduce((prev, cur) => {
-    prev[cur.mainnet] = {
-      testnet: cur.testnet,
-      priceFeedId: cur.priceFeedId,
-    };
-    return prev;
-  }, {} as any);
-
-  console.log(abc);
-  return {
-    commands: [],
-    inputs: [],
-  };
-
   const ONE = BigNumber.from(10).pow(18);
 
   const sign = isLong === increase ? 1 : -1;
@@ -595,46 +571,36 @@ export async function placeOrder({
   // );
   // const protocolFee = PROTOCOL_FEE;
 
-  const [
-    priceInfo,
-    { marginRemaining },
-    { marginAccessible },
-    delayedOrder,
-    position,
-  ] = await multicall(
-    perpsV2MarketAbi,
-    [
-      {
-        address: market,
-        name: "assetPrice",
-        params: [],
-      },
-      {
-        address: market,
-        name: "remainingMargin",
-        params: [account.address],
-      },
-      {
-        address: market,
-        name: "accessibleMargin",
-        params: [account.address],
-      },
-      {
-        address: market,
-        name: "delayedOrders",
-        params: [account.address],
-      },
-      {
-        address: market,
-        name: "positions",
-        params: [account.address],
-      },
-    ],
-    signer
-  );
+  const [priceInfo, { marginRemaining }, { marginAccessible }, position] =
+    await multicall(
+      perpsV2MarketAbi,
+      [
+        {
+          address: market,
+          name: "assetPrice",
+          params: [],
+        },
+        {
+          address: market,
+          name: "remainingMargin",
+          params: [account.address],
+        },
+        {
+          address: market,
+          name: "accessibleMargin",
+          params: [account.address],
+        },
+        {
+          address: market,
+          name: "positions",
+          params: [account.address],
+        },
+      ],
+      signer
+    );
 
   // sizeDelta positive
-  const acceptablePrice = calculateDesiredFillPrice(
+  const acceptablePrice = calculateAcceptablePrice(
     priceInfo.price,
     Number(ethers.utils.formatEther(amount)) / sign > 0
   );
@@ -656,11 +622,29 @@ export async function placeOrder({
 
   console.log("account", account.address);
 
+  const markets = Object.values(MARKET_SYNTHETIX).filter((m) => !!m[chain]);
+
+  const openingCalls: Call[] = markets.map((market) => ({
+    address: market[chain],
+    name: "delayedOrders",
+    params: [account.address],
+  }));
+
+  const delayedOrders: { sizeDelta: BigNumber }[] = await multicall(
+    perpsV2MarketAbi,
+    openingCalls,
+    signer
+  );
+
+  delayedOrders.forEach((delayedOrder, i) => {
+    console.log(markets[i][chain], delayedOrder.sizeDelta.toString());
+    if (!delayedOrder.sizeDelta.eq(0)) {
+      commands.push(Command.PERP_CANCEL_ORDER);
+      inputs.push(abi.encode(["address"], [markets[i][chain]]));
+    }
+  });
+
   // console.log(delayedOrder.sizeDelta);
-  if (Number(ethers.utils.formatEther(delayedOrder.sizeDelta)) !== 0) {
-    commands.push(Command.PERP_CANCEL_ORDER);
-    inputs.push(abi.encode(["address"], [market]));
-  }
 
   let totalAmount = amount;
 
@@ -679,9 +663,6 @@ export async function placeOrder({
 
   let totalAccessibleMargin = BigNumber.from(0);
   const inputMarkets: string[] = [];
-
-  const markets = Object.values(MARKET_SYNTHETIX).filter((m) => !!m[chain]);
-
   const calls: Call[] = markets.map((market) => ({
     address: market[chain],
     name: "accessibleMargin",
@@ -857,7 +838,7 @@ export async function closeOrder({
 
   if (position.size.isZero()) throw Error("No opening position");
   // sizeDelta negative
-  const desiredFillPrice = calculateDesiredFillPrice(
+  const desiredFillPrice = calculateAcceptablePrice(
     priceInfo.price,
     position.size.gt(0) ? false : true
   );

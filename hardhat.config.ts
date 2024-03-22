@@ -13,6 +13,7 @@ const config: HardhatUserConfig = {
         enabled: true,
         runs: 800,
       },
+      viaIR: true,
       metadata: {
         bytecodeHash: "none",
       },
@@ -37,6 +38,31 @@ const config: HardhatUserConfig = {
         process.env.PRIVATE_KEY_2!,
         process.env.PRIVATE_KEY_3!,
       ],
+    },
+    arbitrum: {
+      url: process.env.ARB_NODE_URL,
+      accounts: [
+        process.env.PRIVATE_KEY_1!,
+        process.env.PRIVATE_KEY_2!,
+        process.env.PRIVATE_KEY_3!,
+      ],
+      ...{
+        RELAYER_API_KEY: process.env.RELAYER_API_KEY!,
+        RELAYER_API_SECRET: process.env.RELAYER_API_SECRET!,
+        USD_ASSET: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+        AUTOMATE: "0x2A6C106ae13B558BB9E2Ec64Bd2f1f7BEFF3A5E0",
+        EXECUTOR: "0xdD5918bA45A94A05965c7A8b63BE7CEA1460ABb3",
+        FACTORY_ADDRESS: "0x6aCD1Ac7eeEa7783E805a1c4E31c85A4535d682B",
+        EVENTS_ADDRESS: "0xeb452323b4bFb289867D21cAa524535F443a5904",
+        CONFIGS_ADDRESS: "0x81Ed045eaB09B9164657A2EC76442f1337A38D0e",
+        TASK_CREATOR_ADDRESS: "0x2Fe95465616F6252636fC101400147C0a1e64F6C",
+        IMPLEMENTATION_ADDRESS: "0x6aFa95bCC134c91460521CF0c46340c936E0acA5",
+        SMART_WALLET_ADDRESS: "0x1362011668ad0b665618b3cc0651F4aD7C36c147",
+        ROUTER: "0xaBBc5F99639c9B6bCb58544ddf04EFA6802F4064",
+        POSITION_ROUTER: "0xb87a436B93fFE9D75c5cFA7bAcFff96430b09868",
+        VAULT: "0x489ee077994B6658eAfA855C308275EAd8097C4A",
+        WETH: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+      },
     },
     opSepolia: {
       url: process.env.OP_SEPOLIA_NODE_URL,
@@ -156,6 +182,7 @@ const config: HardhatUserConfig = {
       mainnet: process.env.ETHERSCAN_API_KEY!,
       optimisticEthereum: process.env.OPSCAN_API_KEY!,
       base: process.env.BASESCAN_API_KEY!,
+      arbitrumOne: process.env.ARBISCAN_API_KEY!,
     },
     customChains: [
       // {
@@ -166,6 +193,14 @@ const config: HardhatUserConfig = {
       //     browserURL: "https://goerli.basescan.org",
       //   },
       // },
+      {
+        network: "arbitrumOne",
+        chainId: 421613,
+        urls: {
+          apiURL: "https://api-testnet.arbiscan.io/api",
+          browserURL: "https://testnet.arbiscan.io",
+        },
+      },
       {
         network: "base",
         chainId: 84532,

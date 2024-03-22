@@ -1,19 +1,17 @@
-import { ethers, network } from "hardhat";
+import { ethers } from "hardhat";
 import marketAbi from "../../utils/abis/perpsV2MarketAbi";
 import { CONFIG } from "../../utils/constants";
 
 async function main() {
   const [, wallet2] = await ethers.getSigners();
-
-  // 0x2805E91bdf139E68EFfC79117f39b4C34e71B0Bb
-  const market = "0xCa1Da01A412150b00cAD52b426d65dAB38Ab3830";
+  const market = "0xa35575182f5985d6caA1E4e435e7EaF986232ef8";
   const perp = new ethers.Contract(market, marketAbi, wallet2 as any);
 
-  const orderInfo = await perp.orderFee(
-    ethers.utils.parseEther("0.01").mul(-1),
-    2
-  );
-  console.log("orderInfo", orderInfo);
+  // const orderInfo = await perp.orderFee(
+  //   ethers.utils.parseEther("0.01").mul(-1),
+  //   2
+  // );
+  // console.log("orderInfo", orderInfo);
 
   const price = await perp.assetPrice();
   console.log(ethers.utils.formatEther(price.price), price);

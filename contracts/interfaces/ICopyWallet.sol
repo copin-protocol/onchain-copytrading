@@ -61,6 +61,8 @@ interface ICopyWallet {
 
     error EthWithdrawalFailed();
 
+    error NoOpenPosition();
+
     error NoOrderFound();
 
     error NoTaskFound();
@@ -81,13 +83,16 @@ interface ICopyWallet {
 
     function availableFundD18() external view returns (uint256);
 
-    function checker(
-        uint256 _taskId
-    ) external view returns (bool canExec, bytes memory execPayload);
+    // TODO enable again
+    // function checker(
+    //     uint256 _taskId
+    // ) external view returns (bool canExec, bytes memory execPayload);
+    // function getTask(uint256 _taskId) external view returns (Task memory);
+    // function executeTask(uint256 _taskId) external;
 
     function positions(uint256 _key) external view returns (Position memory);
 
-    function getTask(uint256 _taskId) external view returns (Task memory);
+    
 
     function init(address _owner, address _executor) external;
 
@@ -96,5 +101,5 @@ interface ICopyWallet {
         bytes[] calldata _inputs
     ) external payable;
 
-    function executeTask(uint256 _taskId) external;
+    
 }

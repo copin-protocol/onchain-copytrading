@@ -5,42 +5,36 @@ import {IConfigs} from "./interfaces/IConfigs.sol";
 import {Owned} from "./utils/Owned.sol";
 
 contract Configs is IConfigs, Owned {
+
+    /* ========== STATES ========== */
+
     uint256 public executorFee = 1 ether / 5000;
     uint256 public protocolFee = 4000;
     address public feeReceiver;
 
-    mapping(address => bool) internal _whitelistedTokens;
+    /* ========== CONSTRUCTOR ========== */
 
     constructor(address _owner) Owned(_owner) {
         feeReceiver = _owner;
     }
 
-    function isTokenWhitelisted(
-        address _token
-    ) external view override returns (bool) {
-        return _whitelistedTokens[_token];
-    }
+    /* ========== SETTERS ========== */
 
     function setExecutorFee(uint256 _executorFee) external override onlyOwner {
+        require(_executorFee <= 1 ether / 1000, "Over max fee"); // maximum is 0.001 ethers
         executorFee = _executorFee;
         emit ExecutorFeeSet(_executorFee);
     }
 
     function setProtocolFee(uint256 _protocolFee) external override onlyOwner {
+        require(_protocolFee >= 1000, "Over max fee"); // maximum is 1/1000 = 0.1% trade size
         protocolFee = _protocolFee;
         emit ProtocolFeeSet(protocolFee);
     }
 
     function setFeeReceiver(address _feeReceiver) external override onlyOwner {
+        require(_feeReceiver != address(0), "Invalid address");
         feeReceiver = _feeReceiver;
         emit FeeReceiverSet(feeReceiver);
-    }
-
-    function setTokenWhitelistStatus(
-        address _token,
-        bool _isWhitelisted
-    ) external override onlyOwner {
-        _whitelistedTokens[_token] = _isWhitelisted;
-        emit TokenWhitelistStatusUpdated(_token, _isWhitelisted);
     }
 }

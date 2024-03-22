@@ -175,85 +175,85 @@ contract CopyWalletSNXv2 is CopyWallet, ICopyWalletSNXv2 {
         });
     }
 
-    function _perpValidTask(
-        Task memory _task
-    ) internal view override returns (bool) {
-        IPerpsV2MarketConsolidated market = IPerpsV2MarketConsolidated(
-            address(uint160(_task.market))
-        );
-        try
-            SYSTEM_STATUS.requireFuturesMarketActive(market.marketKey())
-        {} catch {
-            return false;
-        }
-        uint256 price = _indexPrice(market);
-        if (_task.command == TaskCommand.STOP_ORDER) {
-            if (_task.sizeDelta > 0) {
-                // Long: increase position size (buy) once *above* trigger price
-                // ex: unwind short position once price is above target price (prevent further loss)
-                return price >= _task.triggerPrice;
-            } else {
-                // Short: decrease position size (sell) once *below* trigger price
-                // ex: unwind long position once price is below trigger price (prevent further loss)
-                return price <= _task.triggerPrice;
-            }
-        } else if (_task.command == TaskCommand.LIMIT_ORDER) {
-            if (_task.sizeDelta > 0) {
-                // Long: increase position size (buy) once *below* trigger price
-                // ex: open long position once price is below trigger price
-                return price <= _task.triggerPrice;
-            } else {
-                // Short: decrease position size (sell) once *above* trigger price
-                // ex: open short position once price is above trigger price
-                return price >= _task.triggerPrice;
-            }
-        }
-        return false;
-    }
-
-    function _perpExecuteTask(
-        uint256 _taskId,
-        Task memory _task
-    ) internal override {
-        IPerpsV2MarketConsolidated market = IPerpsV2MarketConsolidated(
-            address(uint160(_task.market))
-        );
-        if (_task.command == TaskCommand.STOP_ORDER) {
-            IPerpsV2MarketConsolidated.Position memory position = market
-                .positions(address(this));
-            if (
-                position.size == 0 ||
-                _isSameSign(position.size, _task.sizeDelta)
-            ) {
-                EVENTS.emitCancelGelatoTask({
-                    taskId: _taskId,
-                    gelatoTaskId: _task.gelatoTaskId,
-                    reason: "INVALID_SIZE"
-                });
-                return;
-            }
-            if (_abs(_task.sizeDelta) > _abs(position.size)) {
-                // bound conditional order size delta to current position size
-                _task.sizeDelta = -position.size;
-            }
-        }
-        // if margin was locked, free it
-        if (_task.collateralDelta > 0) {
-            lockedFund -= _abs(_task.collateralDelta);
-        }
-        if (_task.collateralDelta != 0) {
-            if (_task.collateralDelta > 0) {
-                _sufficientFund(_task.collateralDelta, true);
-            }
-            market.transferMargin(_task.collateralDelta);
-        }
-        _placeOrder({
-            _source: _task.source,
-            _market: address(uint160(_task.market)),
-            _sizeDelta: _task.sizeDelta,
-            _acceptablePrice: _task.acceptablePrice
-        });
-    }
+    // TODO enable again
+    // function _perpValidTask(
+    //     Task memory _task
+    // ) internal view override returns (bool) {
+    //     IPerpsV2MarketConsolidated market = IPerpsV2MarketConsolidated(
+    //         address(uint160(_task.market))
+    //     );
+    //     try
+    //         SYSTEM_STATUS.requireFuturesMarketActive(market.marketKey())
+    //     {} catch {
+    //         return false;
+    //     }
+    //     uint256 price = _indexPrice(market);
+    //     if (_task.command == TaskCommand.STOP_ORDER) {
+    //         if (_task.sizeDelta > 0) {
+    //             // Long: increase position size (buy) once *above* trigger price
+    //             // ex: unwind short position once price is above target price (prevent further loss)
+    //             return price >= _task.triggerPrice;
+    //         } else {
+    //             // Short: decrease position size (sell) once *below* trigger price
+    //             // ex: unwind long position once price is below trigger price (prevent further loss)
+    //             return price <= _task.triggerPrice;
+    //         }
+    //     } else if (_task.command == TaskCommand.LIMIT_ORDER) {
+    //         if (_task.sizeDelta > 0) {
+    //             // Long: increase position size (buy) once *below* trigger price
+    //             // ex: open long position once price is below trigger price
+    //             return price <= _task.triggerPrice;
+    //         } else {
+    //             // Short: decrease position size (sell) once *above* trigger price
+    //             // ex: open short position once price is above trigger price
+    //             return price >= _task.triggerPrice;
+    //         }
+    //     }
+    //     return false;
+    // }
+    // function _perpExecuteTask(
+    //     uint256 _taskId,
+    //     Task memory _task
+    // ) internal override {
+    //     IPerpsV2MarketConsolidated market = IPerpsV2MarketConsolidated(
+    //         address(uint160(_task.market))
+    //     );
+    //     if (_task.command == TaskCommand.STOP_ORDER) {
+    //         IPerpsV2MarketConsolidated.Position memory position = market
+    //             .positions(address(this));
+    //         if (
+    //             position.size == 0 ||
+    //             _isSameSign(position.size, _task.sizeDelta)
+    //         ) {
+    //             EVENTS.emitCancelGelatoTask({
+    //                 taskId: _taskId,
+    //                 gelatoTaskId: _task.gelatoTaskId,
+    //                 reason: "INVALID_SIZE"
+    //             });
+    //             return;
+    //         }
+    //         if (_abs(_task.sizeDelta) > _abs(position.size)) {
+    //             // bound conditional order size delta to current position size
+    //             _task.sizeDelta = -position.size;
+    //         }
+    //     }
+    //     // if margin was locked, free it
+    //     if (_task.collateralDelta > 0) {
+    //         lockedFund -= _abs(_task.collateralDelta);
+    //     }
+    //     if (_task.collateralDelta != 0) {
+    //         if (_task.collateralDelta > 0) {
+    //             _sufficientFund(_task.collateralDelta, true);
+    //         }
+    //         market.transferMargin(_task.collateralDelta);
+    //     }
+    //     _placeOrder({
+    //         _source: _task.source,
+    //         _market: address(uint160(_task.market)),
+    //         _sizeDelta: _task.sizeDelta,
+    //         _acceptablePrice: _task.acceptablePrice
+    //     });
+    // }
 
     function _getPerpsV2Market(
         bytes32 _marketKey
@@ -286,8 +286,6 @@ contract CopyWalletSNXv2 is CopyWallet, ICopyWalletSNXv2 {
         uint256 _tokenAmount,
         IPerpsV2MarketConsolidated _market
     ) internal view returns (uint256) {
-        return
-            (_tokenAmount * _indexPrice(_market)) /
-            (10 ** USD_ASSET.decimals());
+        return _d18ToUsd((_tokenAmount * _indexPrice(_market)) / 10 ** 18);
     }
 }

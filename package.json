@@ -12,6 +12,8 @@
     "close:snx:opSepolia": "npx hardhat run --network opSepolia scripts/SNXv2/relayCloseOrder.ts",
     "deploy:snx:op": "npx hardhat run --network op scripts/SNXv2/deploy.ts",
     "verify:snx:op": "npx hardhat run --network op scripts/SNXv2/verify.ts",
+    "deploy:gmx:arbitrum": "npx hardhat run --network arbitrum scripts/GMXv1/deploy.ts",
+    "verify:gmx:arbitrum": "npx hardhat run --network arbitrum scripts/GMXv1/verify.ts",
     "compile": "hardhat compile",
     "test": "hardhat test",
     "watch": "hardhat watch"
