@@ -53,7 +53,7 @@ abstract contract CopyWallet is
         TASK_CREATOR = ITaskCreator(_params.taskCreator);
     }
 
-    /* ========== GETTERS ========== */
+    /* ========== VIEWS ========== */
 
     function executorUsdFee(
         uint256 _fee
@@ -83,7 +83,7 @@ abstract contract CopyWallet is
         _setExecutor(_executor);
         _perpInit();
     }
-    
+
     function _setInitialOwnership(address _owner) private {
         owner = _owner;
         emit OwnershipTransferred(address(0), _owner);
@@ -96,6 +96,11 @@ abstract contract CopyWallet is
             caller: msg.sender,
             delegate: _executor
         });
+    }
+
+    function setExecutor(address _executor) external {
+        if (!isOwner(msg.sender)) revert Unauthorized();
+        _setExecutor(_executor);
     }
 
     function transferOwnership(address _newOwner) public override {

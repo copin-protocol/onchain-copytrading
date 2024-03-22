@@ -73,15 +73,17 @@ interface ICopyWallet {
 
     function VERSION() external view returns (bytes32);
 
+    function executor() external view returns (address);
+
     function lockedFund() external view returns (uint256);
 
     function lockedFundD18() external view returns (uint256);
 
-    function executorUsdFee(uint256 _fee) external view returns (uint256);
-
     function availableFund() external view returns (uint256);
 
     function availableFundD18() external view returns (uint256);
+
+    function executorUsdFee(uint256 _fee) external view returns (uint256);
 
     // TODO enable again
     // function checker(
@@ -92,14 +94,10 @@ interface ICopyWallet {
 
     function positions(uint256 _key) external view returns (Position memory);
 
-    
-
     function init(address _owner, address _executor) external;
 
     function execute(
         Command[] calldata _commands,
         bytes[] calldata _inputs
     ) external payable;
-
-    
 }

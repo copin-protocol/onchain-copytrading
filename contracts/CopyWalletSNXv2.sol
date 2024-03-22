@@ -10,9 +10,12 @@ import {IPerpsV2ExchangeRate} from "contracts/interfaces/SNXv2/IPerpsV2ExchangeR
 import {ISystemStatus} from "contracts/interfaces/SNXv2/ISystemStatus.sol";
 
 contract CopyWalletSNXv2 is CopyWallet, ICopyWalletSNXv2 {
+    /* ========== IMMUTABLES ========== */
     IPerpsV2ExchangeRate internal immutable PERPS_V2_EXCHANGE_RATE;
     IFuturesMarketManager internal immutable FUTURES_MARKET_MANAGER;
     ISystemStatus internal immutable SYSTEM_STATUS;
+
+    /* ========== CONSTANTS ========== */
     uint256 internal constant MAX_PRICE_LATENCY = 120;
     bytes32 internal constant ETH_MARKET_KEY = "sETHPERP";
 
@@ -35,11 +38,15 @@ contract CopyWalletSNXv2 is CopyWallet, ICopyWalletSNXv2 {
         SYSTEM_STATUS = ISystemStatus(_params.systemStatus);
     }
 
+    /* ========== VIEWS ========== */
+
     function executorUsdFee(
         uint256 _fee
     ) public view override returns (uint256) {
         return _tokenToUsd(_fee, _getPerpsV2Market(ETH_MARKET_KEY));
     }
+
+    /* ========== PERPS ========== */
 
     function _placeOrder(
         address _source,
@@ -52,12 +59,16 @@ contract CopyWalletSNXv2 is CopyWallet, ICopyWalletSNXv2 {
                 address(this)
             );
 
-        if (position.size != 0 && _source != _positions[uint256(uint160(_market))].source) {
+        if (
+            position.size != 0 &&
+            _source != _positions[uint256(uint160(_market))].source
+        ) {
             revert SourceMismatch();
         }
 
         if (
-            position.size != 0 && !_isSameSign(_sizeDelta, position.size) &&
+            position.size != 0 &&
+            !_isSameSign(_sizeDelta, position.size) &&
             _abs(_sizeDelta) > _abs(position.size)
         ) {
             // reduce only
@@ -88,9 +99,6 @@ contract CopyWalletSNXv2 is CopyWallet, ICopyWalletSNXv2 {
         assembly {
             market := calldataload(_inputs.offset)
         }
-        // IPerpsV2MarketConsolidated.DelayedOrder
-        //     memory delayedOrder = IPerpsV2MarketConsolidated(market)
-        //         .delayedOrders(address(this));
         IPerpsV2MarketConsolidated(market).cancelOffchainDelayedOrder(
             address(this)
         );
@@ -105,7 +113,7 @@ contract CopyWalletSNXv2 is CopyWallet, ICopyWalletSNXv2 {
             assembly {
                 market := calldataload(add(_inputs.offset, mul(i, 0x20)))
             }
-           IPerpsV2MarketConsolidated(market).withdrawAllMargin();
+            IPerpsV2MarketConsolidated(market).withdrawAllMargin();
         }
     }
 
@@ -175,7 +183,9 @@ contract CopyWalletSNXv2 is CopyWallet, ICopyWalletSNXv2 {
         });
     }
 
-    // TODO enable again
+    /* ========== TASKS ========== */
+
+    // TODO task
     // function _perpValidTask(
     //     Task memory _task
     // ) internal view override returns (bool) {
@@ -254,6 +264,8 @@ contract CopyWalletSNXv2 is CopyWallet, ICopyWalletSNXv2 {
     //         _acceptablePrice: _task.acceptablePrice
     //     });
     // }
+
+    /* ========== UTILITIES ========== */
 
     function _getPerpsV2Market(
         bytes32 _marketKey
