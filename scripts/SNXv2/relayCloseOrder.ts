@@ -9,7 +9,8 @@ import { getRelaySigner } from "../../utils/relay";
 // const { formatUnits } = require("ethers/lib/utils");
 
 async function main() {
-  const signer = getRelaySigner();
+  const [, signer] = await ethers.getSigners();
+  // const signer = getRelaySigner();
   const account = new ethers.Contract(
     CONFIG.SMART_WALLET_ADDRESS,
     accountAbi,
@@ -17,7 +18,7 @@ async function main() {
   );
   const chain = network.config.chainId === 10 ? "mainnet" : "testnet";
 
-  const market = MARKET_SYNTHETIX.ADA[chain];
+  const market = MARKET_SYNTHETIX.ETH[chain];
 
   const perp = new ethers.Contract(market, marketAbi, signer as any);
 
@@ -30,13 +31,13 @@ async function main() {
 
   const tx = await account.execute(commands, inputs);
   console.log("tx", tx);
-  await tx.wait();
-  await new Promise((resolve) =>
-    setTimeout(() => {
-      resolve(2);
-    }, 3000)
-  );
-  executeOrder(perp, chain);
+  // await tx.wait();
+  // await new Promise((resolve) =>
+  //   setTimeout(() => {
+  //     resolve(2);
+  //   }, 3000)
+  // );
+  // executeOrder(perp, chain);
 }
 
 main();

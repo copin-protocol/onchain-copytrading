@@ -538,6 +538,47 @@ export const MARKET_SYNTHETIX: {
   },
 };
 
+const a = [
+  {
+    name: "DelayedOrderSubmitted",
+    inputs: [
+      {
+        name: "account",
+        type: "address",
+      },
+      { name: "isOffchain", type: "bool" },
+      {
+        name: "sizeDelta",
+        type: "int256",
+      },
+      {
+        name: "targetRoundId",
+        type: "uint256",
+      },
+      {
+        name: "intentionTime",
+        type: "uint256",
+      },
+      {
+        name: "executableAtTime",
+        type: "uint256",
+      },
+      {
+        name: "commitDeposit",
+        type: "uint256",
+      },
+      {
+        name: "keeperDeposit",
+        type: "uint256",
+      },
+      {
+        name: "trackingCode",
+        type: "bytes32",
+      },
+    ],
+  },
+];
+
 export const MARKETS = Object.values(MARKET_SYNTHETIX);
 
 export const DEFAULT_AMOUNT = ethers.utils.parseEther("60");
@@ -570,7 +611,6 @@ export async function placeOrder({
   //   ethers.utils.parseEther("1").div(5000)
   // );
   // const protocolFee = PROTOCOL_FEE;
-
   const [priceInfo, { marginRemaining }, { marginAccessible }, position] =
     await multicall(
       perpsV2MarketAbi,
@@ -837,6 +877,9 @@ export async function closeOrder({
   );
 
   if (position.size.isZero()) throw Error("No opening position");
+
+  // const price = priceInfo.price
+
   // sizeDelta negative
   const desiredFillPrice = calculateAcceptablePrice(
     priceInfo.price,

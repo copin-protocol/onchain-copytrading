@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.7;
+pragma solidity 0.8.18;
 
 struct Log {
     uint256 index; // Index of the log in the block
@@ -22,45 +22,38 @@ interface ILogAutomation {
 }
 
 contract TestSignal is ILogAutomation {
-    // event DelayedOrderSubmitted(address indexed account, bool isOffchain, int256 sizeDelta, uint256 targetRoundId, uint256 intentionTime, uint256 executableAtTime, uint256 commitDeposit, uint256 keeperDeposit, bytes32 trackingCode);
-    event DelayedOrderSubmitted(address indexed account);
+    address trader;
+    event DelayedOrderSubmitted(
+        address indexed account,
+        address market,
+        int256 sizeDelta
+    );
+    // event DelayedOrderSubmitted(address indexed account);
 
-    constructor() {}
+    constructor(address _trader) {
+        trader = _trader;
+    }
 
     function checkLog(
         Log calldata log,
-        bytes memory
+        bytes memory checkData
     ) external pure returns (bool upkeepNeeded, bytes memory performData) {
         upkeepNeeded = true;
-        // (bool isOffchain, int256 sizeDelta, uint256 targetRoundId, uint256 intentionTime, uint256 executableAtTime, uint256 commitDeposit, uint256 keeperDeposit, bytes32 trackingCode) = abi.decode(log.data, (bool, int256, uint256, uint256, uint256, uint256, uint256, bytes32));
+        (, int256 sizeDelta, , , , , , ) = abi.decode(
+            log.data,
+            (bool, int256, uint256, uint256, uint256, uint256, uint256, bytes32)
+        );
         address account = bytes32ToAddress(log.topics[1]);
-        performData = abi.encode(
-          account
-          // isOffchain,
-          // sizeDelta,
-          // targetRoundId,
-          // intentionTime,
-          // executableAtTime,
-          // commitDeposit,
-          // keeperDeposit,
-          // trackingCode
-          );
+        performData = abi.encode(account, log.source, sizeDelta);
     }
 
     function performUpkeep(bytes calldata performData) external override {
-      address account = abi.decode(performData, (address));
-        // (address account, bool isOffchain, int256 sizeDelta, uint256 targetRoundId, uint256 intentionTime, uint256 executableAtTime, uint256 commitDeposit, uint256 keeperDeposit, bytes32 trackingCode) = abi.decode(performData, (address, bool, int256, uint256, uint256, uint256, uint256, uint256, bytes32));
-      emit DelayedOrderSubmitted(
-        account
-        // isOffchain,
-        // sizeDelta,
-        // targetRoundId,
-        // intentionTime,
-        // executableAtTime,
-        // commitDeposit,
-        // keeperDeposit,
-        // trackingCode
-      );
+        // address account = abi.decode(performData, (address));
+        (address account, address market, int256 sizeDelta) = abi.decode(
+            performData,
+            (address, address, int256)
+        );
+        emit DelayedOrderSubmitted(account, market, sizeDelta);
     }
 
     function bytes32ToAddress(bytes32 _address) public pure returns (address) {

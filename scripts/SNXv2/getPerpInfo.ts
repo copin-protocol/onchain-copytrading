@@ -4,7 +4,7 @@ import { CONFIG } from "../../utils/constants";
 
 async function main() {
   const [, wallet2] = await ethers.getSigners();
-  const market = "0xa35575182f5985d6caA1E4e435e7EaF986232ef8";
+  const market = "0xCa1Da01A412150b00cAD52b426d65dAB38Ab3830";
   const perp = new ethers.Contract(market, marketAbi, wallet2 as any);
 
   // const orderInfo = await perp.orderFee(
