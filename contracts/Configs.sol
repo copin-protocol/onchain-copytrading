@@ -5,11 +5,14 @@ import {IConfigs} from "./interfaces/IConfigs.sol";
 import {Owned} from "./utils/Owned.sol";
 
 contract Configs is IConfigs, Owned {
-
     /* ========== STATES ========== */
 
     uint256 public executorFee = 1 ether / 5000;
     uint256 public protocolFee = 4000;
+    uint256 public minMargin = 100 * 1e18;
+    uint256 public maxMargin = 1000 * 1e18;
+    uint256 public minLeverage = 2;
+    uint256 public maxLeverage = 50;
     address public feeReceiver;
 
     /* ========== CONSTRUCTOR ========== */

@@ -48,11 +48,11 @@ async function main() {
   //   postion.map((e: any) => e.toString())
   // );
 
-  // const executorUsdFee = await account.executorUsdFee(
+  // const ethToUsd = await account.ethToUsd(
   //   ethers.utils.parseEther("1").div(5000)
   // );
 
-  // console.log("executorUsdFee", executorUsdFee.toString());
+  // console.log("ethToUsd", ethToUsd.toString());
 
   // return;
 

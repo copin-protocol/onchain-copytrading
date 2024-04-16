@@ -8,8 +8,14 @@ async function main() {
   const factory = new ethers.Contract(CONFIG.FACTORY_ADDRESS, factoryAbi);
   const executor = (network.config as CopinConfig).EXECUTOR;
   console.log("executor", executor);
-  const tx = await factory.connect(wallet2 as any).newCopyWallet(executor);
-  console.log(tx);
+  if (wallet2.provider) {
+    const feeData = await wallet2.provider.getFeeData();
+    const tx = await factory.connect(wallet2 as any).newCopyWallet({
+      maxPriorityFeePerGas: feeData.maxPriorityFeePerGas, // Recommended maxPriorityFeePerGas
+      maxFeePerGas: feeData.maxFeePerGas, // Recommended maxFeePerGas
+    });
+    console.log(tx);
+  }
 }
 
 main();

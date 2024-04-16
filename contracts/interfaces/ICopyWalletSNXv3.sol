@@ -13,8 +13,6 @@ interface ICopyWalletSNXv3 {
         address events;
         address configs;
         address usdAsset;
-        address automate;
-        address taskCreator;
         address perpsMarket;
         address spotMarket;
         address sUSDC;
@@ -24,17 +22,17 @@ interface ICopyWalletSNXv3 {
 
     struct Order {
         uint128 market;
-        address source;
+        address trader;
         uint256 commitmentBlock;
     }
 
     function getAllocatedAccount(
-        address _source,
+        address _trader,
         uint256 _market
     ) external view returns (uint128);
 
     function getOpenPosition(
-        address _source,
+        address _trader,
         uint256 _market
     )
         external

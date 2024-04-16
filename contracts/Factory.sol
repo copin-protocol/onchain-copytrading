@@ -6,14 +6,13 @@ import {CopyWalletProxy} from "./CopyWalletProxy.sol";
 import {Owned} from "./utils/Owned.sol";
 
 contract Factory is IFactory, Owned {
-
     /* ========== STATE ========== */
 
     bool public canUpgrade = true;
     address public implementation;
 
-    mapping(address accounts => bool exist) public accounts;
-    mapping(address owner => address[] accounts) internal ownerCopyWallets;
+    mapping(address wallets => bool exist) public wallets;
+    mapping(address owner => address[] wallets) internal ownerCopyWallets;
 
     /* ========== CONSTRUCTOR ========== */
 
@@ -22,10 +21,10 @@ contract Factory is IFactory, Owned {
     /* ========== GETTERS ========== */
 
     function getCopyWalletOwner(
-        address _account
+        address _wallet
     ) public view override returns (address) {
-        if (!accounts[_account]) revert CopyWalletDoesNotExist();
-        (bool success, bytes memory data) = _account.staticcall(
+        if (!wallets[_wallet]) revert CopyWalletDoesNotExist();
+        (bool success, bytes memory data) = _wallet.staticcall(
             abi.encodeWithSignature("owner()")
         );
         assert(success);
@@ -44,7 +43,7 @@ contract Factory is IFactory, Owned {
         address _newOwner,
         address _oldOwner
     ) external override {
-        if (!accounts[msg.sender]) revert CopyWalletDoesNotExist();
+        if (!wallets[msg.sender]) revert CopyWalletDoesNotExist();
         uint256 length = ownerCopyWallets[_oldOwner].length;
 
         for (uint256 i = 0; i < length; ) {
@@ -64,30 +63,28 @@ contract Factory is IFactory, Owned {
         }
     }
 
-    function newCopyWallet(
-        address initialExecutor
-    ) external override returns (address payable accountAddress) {
-        accountAddress = payable(address(new CopyWalletProxy(address(this))));
-        accounts[accountAddress] = true;
-        ownerCopyWallets[msg.sender].push(accountAddress);
+    function newCopyWallet()
+        external
+        override
+        returns (address payable walletAddress)
+    {
+        walletAddress = payable(address(new CopyWalletProxy(address(this))));
+        wallets[walletAddress] = true;
+        ownerCopyWallets[msg.sender].push(walletAddress);
 
-        (bool success, bytes memory data) = accountAddress.call(
-            abi.encodeWithSignature(
-                "init(address,address)",
-                msg.sender,
-                initialExecutor
-            )
+        (bool success, bytes memory data) = walletAddress.call(
+            abi.encodeWithSignature("init(address)", msg.sender)
         );
         if (!success) revert FailedToInitCopyWallet(data);
 
-        (success, data) = accountAddress.call(
+        (success, data) = walletAddress.call(
             abi.encodeWithSignature("VERSION()")
         );
         if (!success) revert CopyWalletFailedToFetchVersion(data);
 
         emit NewCopyWallet({
             creator: msg.sender,
-            account: accountAddress,
+            wallet: walletAddress,
             version: abi.decode(data, (bytes32))
         });
     }
@@ -99,7 +96,9 @@ contract Factory is IFactory, Owned {
     ) external override onlyOwner {
         if (!canUpgrade) revert CannotUpgrade();
         implementation = _implementation;
-        emit CopyWalletImplementationUpgraded({implementation: _implementation});
+        emit CopyWalletImplementationUpgraded({
+            implementation: _implementation
+        });
     }
 
     function removeUpgradability() external override onlyOwner {

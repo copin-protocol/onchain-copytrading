@@ -8,8 +8,6 @@ interface ICopyWalletGMXv1 {
         address events;
         address configs;
         address usdAsset;
-        address automate;
-        address taskCreator;
         address router;
         address positionRouter;
         address vault;

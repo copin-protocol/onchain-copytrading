@@ -65,7 +65,10 @@ abstract contract Auth {
 
         delegates[_delegate] = true;
 
-        emit DelegatedCopyWalletAdded({caller: msg.sender, delegate: _delegate});
+        emit DelegatedCopyWalletAdded({
+            caller: msg.sender,
+            delegate: _delegate
+        });
     }
 
     /// @dev only owner can remove a delegate (not delegates)

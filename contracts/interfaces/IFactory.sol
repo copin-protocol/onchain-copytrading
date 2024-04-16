@@ -4,7 +4,7 @@ pragma solidity 0.8.18;
 interface IFactory {
     event NewCopyWallet(
         address indexed creator,
-        address indexed account,
+        address indexed wallet,
         bytes32 version
     );
 
@@ -22,10 +22,10 @@ interface IFactory {
 
     function implementation() external view returns (address);
 
-    function accounts(address _account) external view returns (bool);
+    function wallets(address _wallet) external view returns (bool);
 
     function getCopyWalletOwner(
-        address _account
+        address _wallet
     ) external view returns (address);
 
     function getCopyWalletsOwnedBy(
@@ -37,12 +37,10 @@ interface IFactory {
         address _oldOwner
     ) external;
 
-    function newCopyWallet(
-        address initialExecutor
-    ) external returns (address payable accountAddress);
+    function newCopyWallet() external returns (address payable walletAddress);
 
-    /// @dev this *will* impact all existing accounts
-    /// @dev future accounts will also point to this new implementation (until
+    /// @dev this *will* impact all existing wallets
+    /// @dev future wallets will also point to this new implementation (until
     /// upgradeCopyWalletImplementation() is called again with a newer implementation)
     /// @dev *DANGER* this function does not check the new implementation for validity,
     /// thus, a bad upgrade could result in severe consequences.

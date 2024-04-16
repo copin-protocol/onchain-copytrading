@@ -10,17 +10,13 @@ interface IEvents {
 
     function emitDeposit(address user, uint256 amount) external;
 
-    event Deposit(
-        address indexed user,
-        address indexed account,
-        uint256 amount
-    );
+    event Deposit(address indexed user, address indexed wallet, uint256 amount);
 
     function emitWithdraw(address user, uint256 amount) external;
 
     event Withdraw(
         address indexed user,
-        address indexed account,
+        address indexed wallet,
         uint256 amount
     );
 
@@ -28,7 +24,7 @@ interface IEvents {
 
     event EthWithdraw(
         address indexed user,
-        address indexed account,
+        address indexed wallet,
         uint256 amount
     );
 
@@ -42,7 +38,7 @@ interface IEvents {
     event ChargeExecutorFee(
         address indexed executor,
         address indexed receiver,
-        address indexed copyWallet,
+        address indexed wallet,
         uint256 fee,
         uint256 feeUsd
     );
@@ -56,83 +52,9 @@ interface IEvents {
 
     event ChargeProtocolFee(
         address indexed receiver,
-        address indexed copyWallet,
+        address indexed wallet,
         uint256 sizeDelta,
         uint256 price,
         uint256 feeUsd
-    );
-
-    function emitCreateGelatoTask(
-        uint256 taskId,
-        bytes32 gelatoTaskId,
-        ICopyWallet.TaskCommand command,
-        address source,
-        uint256 market,
-        int256 collateralDelta,
-        int256 sizeDelta,
-        uint256 triggerPrice,
-        uint256 acceptablePrice,
-        address referrer
-    ) external;
-
-    event CreateGelatoTask(
-        address indexed copyWallet,
-        uint256 indexed taskId,
-        bytes32 indexed gelatoTaskId,
-        ICopyWallet.TaskCommand command,
-        address source,
-        uint256 market,
-        int256 collateralDelta,
-        int256 sizeDelta,
-        uint256 triggerPrice,
-        uint256 acceptablePrice,
-        address referrer
-    );
-
-    function emitUpdateGelatoTask(
-        uint256 taskId,
-        bytes32 gelatoTaskId,
-        int256 collateralDelta,
-        int256 sizeDelta,
-        uint256 triggerPrice,
-        uint256 acceptablePrice
-    ) external;
-
-    event UpdateGelatoTask(
-        address indexed copyWallet,
-        uint256 indexed taskId,
-        bytes32 indexed gelatoTaskId,
-        int256 collateralDelta,
-        int256 sizeDelta,
-        uint256 triggerPrice,
-        uint256 acceptablePrice
-    );
-
-    function emitCancelGelatoTask(
-        uint256 taskId,
-        bytes32 gelatoTaskId,
-        bytes32 reason
-    ) external;
-
-    event CancelGelatoTask(
-        address indexed copyWallet,
-        uint256 indexed taskId,
-        bytes32 indexed gelatoTaskId,
-        bytes32 reason
-    );
-
-    function emitGelatoTaskRunned(
-        uint256 taskId,
-        bytes32 gelatoTaskId,
-        uint256 fillPrice,
-        uint256 fee
-    ) external;
-
-    event GelatoTaskRunned(
-        address indexed copyWallet,
-        uint256 indexed taskId,
-        bytes32 indexed gelatoTaskId,
-        uint256 fillPrice,
-        uint256 fee
     );
 }

@@ -6,7 +6,6 @@ import {AutomateTaskCreator} from "./utils/gelato/AutomateTaskCreator.sol";
 import {ModuleData} from "./utils/gelato/Types.sol";
 
 contract TaskCreator is AutomateTaskCreator {
-
     /* ========== IMMUTABLES ========== */
 
     address public immutable factory;
@@ -31,7 +30,7 @@ contract TaskCreator is AutomateTaskCreator {
     /* ========== MODIFIERS ========== */
 
     modifier onlyCopyWallets() {
-        if (!IFactory(factory).accounts(msg.sender)) {
+        if (!IFactory(factory).wallets(msg.sender)) {
             revert OnlyCopyWallets();
         }
         _;

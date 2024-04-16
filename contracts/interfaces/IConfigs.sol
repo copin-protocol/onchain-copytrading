@@ -12,6 +12,14 @@ interface IConfigs {
 
     function protocolFee() external view returns (uint256);
 
+    function minMargin() external view returns (uint256);
+
+    function maxMargin() external view returns (uint256);
+
+    function minLeverage() external view returns (uint256);
+
+    function maxLeverage() external view returns (uint256);
+
     function feeReceiver() external view returns (address);
 
     function setExecutorFee(uint256 _executorFee) external;

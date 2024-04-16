@@ -20,18 +20,18 @@ async function main() {
     address: CONFIG.IMPLEMENTATION_ADDRESS,
   };
 
-  // await run("verify:verify", {
-  //   address: factory.address,
-  //   constructorArguments: [wallet.address],
-  // });
-  // await run("verify:verify", {
-  //   address: events.address,
-  //   constructorArguments: [factory.address],
-  // });
-  // await run("verify:verify", {
-  //   address: configs.address,
-  //   constructorArguments: [wallet.address],
-  // });
+  await run("verify:verify", {
+    address: factory.address,
+    constructorArguments: [wallet.address],
+  });
+  await run("verify:verify", {
+    address: events.address,
+    constructorArguments: [factory.address],
+  });
+  await run("verify:verify", {
+    address: configs.address,
+    constructorArguments: [wallet.address],
+  });
   // await run("verify:verify", {
   //   address: taskCreator.address,
   //   constructorArguments: [factory.address, automate],
@@ -44,8 +44,6 @@ async function main() {
         events: events.address,
         configs: configs.address,
         usdAsset,
-        automate,
-        taskCreator: taskCreator.address,
         exchangeRate,
         marketManager,
         systemStatus,

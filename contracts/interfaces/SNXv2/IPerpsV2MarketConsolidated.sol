@@ -34,6 +34,10 @@ interface IPerpsV2MarketConsolidated {
 
     function assetPrice() external view returns (uint256 price, bool invalid);
 
+    function remainingMargin(
+        address account
+    ) external view returns (uint marginRemaining, bool invalid);
+
     function transferMargin(int256 marginDelta) external;
 
     function withdrawAllMargin() external;

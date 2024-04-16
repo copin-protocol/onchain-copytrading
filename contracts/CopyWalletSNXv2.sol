@@ -18,6 +18,10 @@ contract CopyWalletSNXv2 is CopyWallet, ICopyWalletSNXv2 {
     /* ========== CONSTANTS ========== */
     uint256 internal constant MAX_PRICE_LATENCY = 120;
     bytes32 internal constant ETH_MARKET_KEY = "sETHPERP";
+    uint256 internal constant INCREASE_SLIPPAGE = 3;
+    uint256 internal constant DECREASE_SLIPPAGE = 10;
+
+    address[] _pendingClosedMarkets;
 
     constructor(
         ConstructorParams memory _params
@@ -27,9 +31,7 @@ contract CopyWalletSNXv2 is CopyWallet, ICopyWalletSNXv2 {
                 factory: _params.factory,
                 events: _params.events,
                 configs: _params.configs,
-                usdAsset: _params.usdAsset,
-                automate: _params.automate,
-                taskCreator: _params.taskCreator
+                usdAsset: _params.usdAsset
             })
         )
     {
@@ -40,230 +42,241 @@ contract CopyWalletSNXv2 is CopyWallet, ICopyWalletSNXv2 {
 
     /* ========== VIEWS ========== */
 
-    function executorUsdFee(
-        uint256 _fee
-    ) public view override returns (uint256) {
+    function ethToUsd(uint256 _fee) public view override returns (uint256) {
         return _tokenToUsd(_fee, _getPerpsV2Market(ETH_MARKET_KEY));
     }
 
     /* ========== PERPS ========== */
 
-    function _placeOrder(
-        address _source,
-        address _market,
-        int256 _sizeDelta,
-        uint256 _acceptablePrice
-    ) internal {
+    function copy(address _trader, uint256 _market) external override {
+        address market = address(uint160(_market));
+        Copytrade memory copytrade = _copytrades[_trader];
+
+        require(copytrade.margin != 0, "CopyWallet: Copytrade is not exist");
+
         IPerpsV2MarketConsolidated.Position
-            memory position = IPerpsV2MarketConsolidated(_market).positions(
-                address(this)
-            );
-
-        if (
-            position.size != 0 &&
-            _source != _positions[uint256(uint160(_market))].source
-        ) {
-            revert SourceMismatch();
-        }
-
-        if (
-            position.size != 0 &&
-            !_isSameSign(_sizeDelta, position.size) &&
-            _abs(_sizeDelta) > _abs(position.size)
-        ) {
-            // reduce only
-            _sizeDelta = -position.size;
-        }
-        bool isIncrease = position.size == 0 ||
-            _isSameSign(position.size, _sizeDelta);
-        uint256 price = _indexPrice(IPerpsV2MarketConsolidated(_market));
-
-        IPerpsV2MarketConsolidated(_market)
-            .submitOffchainDelayedOrderWithTracking({
-                sizeDelta: _sizeDelta,
-                desiredFillPrice: _acceptablePrice,
-                trackingCode: TRACKING_CODE
-            });
-        _postOrder({
-            _id: uint256(uint160(_market)),
-            _source: _source,
-            _lastSize: _abs(position.size),
-            _sizeDelta: _abs(_sizeDelta),
-            _price: price,
-            _isIncrease: isIncrease
-        });
-    }
-
-    function _perpCancelOrder(bytes calldata _inputs) internal override {
-        address market;
-        assembly {
-            market := calldataload(_inputs.offset)
-        }
-        IPerpsV2MarketConsolidated(market).cancelOffchainDelayedOrder(
-            address(this)
-        );
-    }
-
-    function _perpWithdrawAllMargin(bytes calldata _inputs) internal override {
-        require(_inputs.length % 0x20 == 0, "Invalid input length");
-        uint256 length = _inputs.length / 0x20;
-
-        for (uint256 i = 0; i < length; i++) {
-            address market;
-            assembly {
-                market := calldataload(add(_inputs.offset, mul(i, 0x20)))
-            }
-            IPerpsV2MarketConsolidated(market).withdrawAllMargin();
-        }
-    }
-
-    function _perpModifyCollateral(bytes calldata _inputs) internal override {
-        address market;
-        int256 amount;
-        assembly {
-            market := calldataload(_inputs.offset)
-            amount := calldataload(add(_inputs.offset, 0x20))
-        }
-        if (amount > 0) {
-            _sufficientFund(amount, true);
-        }
-        IPerpsV2MarketConsolidated(market).transferMargin(amount);
-    }
-
-    function _perpPlaceOrder(bytes calldata _inputs) internal override {
-        address source;
-        address market;
-        int256 sizeDelta;
-        uint256 acceptablePrice;
-        assembly {
-            source := calldataload(_inputs.offset)
-            market := calldataload(add(_inputs.offset, 0x20))
-            sizeDelta := calldataload(add(_inputs.offset, 0x40))
-            acceptablePrice := calldataload(add(_inputs.offset, 0x60))
-        }
-        _placeOrder({
-            _source: source,
-            _market: market,
-            _sizeDelta: sizeDelta,
-            _acceptablePrice: acceptablePrice
-        });
-    }
-
-    function _perpCloseOrder(bytes calldata _inputs) internal override {
-        address source;
-        address market;
-        uint256 acceptablePrice;
-        assembly {
-            source := calldataload(_inputs.offset)
-            market := calldataload(add(_inputs.offset, 0x20))
-            acceptablePrice := calldataload(add(_inputs.offset, 0x40))
-        }
-
-        if (source != _positions[uint256(uint160(market))].source) {
-            revert SourceMismatch();
-        }
+            memory traderPosition = IPerpsV2MarketConsolidated(market)
+                .positions(_trader);
 
         IPerpsV2MarketConsolidated.Position
             memory position = IPerpsV2MarketConsolidated(market).positions(
                 address(this)
             );
-        uint256 price = _indexPrice(IPerpsV2MarketConsolidated(market));
-        IPerpsV2MarketConsolidated(market)
-            .submitCloseOffchainDelayedOrderWithTracking({
+
+        Position memory copyPosition = _positions[_market];
+
+        require(
+            position.size == 0 || _trader == copyPosition.trader,
+            "CopyWallet: Trader mismatch"
+        );
+
+        require(
+            _abs(traderPosition.size) != copyPosition.lastTraderSize,
+            "CopyWallet: Trader position size has not changed"
+        );
+
+        require(
+            traderPosition.size * position.size >= 0,
+            "CopyWallet: Position side mismatch"
+        );
+
+        IPerpsV2MarketConsolidated.DelayedOrder
+            memory delayedOrder = IPerpsV2MarketConsolidated(market)
+                .delayedOrders(address(this));
+
+        if (
+            delayedOrder.sizeDelta != 0 &&
+            delayedOrder.intentionTime + 60 < block.timestamp
+        ) {
+            IPerpsV2MarketConsolidated(market).cancelOffchainDelayedOrder(
+                address(this)
+            );
+        }
+
+        if (traderPosition.size != 0) {
+            _placeOrder({
+                _trader: _trader,
+                _market: market,
+                _traderSize: traderPosition.size,
+                _size: position.size,
+                _copytrade: copytrade,
+                _copyPosition: copyPosition
+            });
+        } else {
+            _closeOrder({
+                _trader: _trader,
+                _market: market,
+                _traderSize: traderPosition.size,
+                _size: position.size
+            });
+        }
+    }
+
+    function closePosition(uint256 _market) external override onlyOwner {
+        address market = address(uint160(_market));
+        Position memory copyPosition = _positions[_market];
+        IPerpsV2MarketConsolidated.Position
+            memory position = IPerpsV2MarketConsolidated(market).positions(
+                address(this)
+            );
+        _closeOrder({
+            _trader: copyPosition.trader,
+            _market: market,
+            _traderSize: position.size > 0
+                ? -int256(copyPosition.lastTraderSize)
+                : int256(copyPosition.lastTraderSize),
+            _size: -position.size
+        });
+    }
+
+    function _placeOrder(
+        address _trader,
+        address _market,
+        int256 _traderSize,
+        int256 _size,
+        Copytrade memory _copytrade,
+        Position memory _copyPosition
+    ) internal {
+        if (_pendingClosedMarkets.length > 0) {
+            for (uint i = 0; i < _pendingClosedMarkets.length; i++) {
+                IPerpsV2MarketConsolidated(_pendingClosedMarkets[i])
+                    .withdrawAllMargin();
+            }
+            delete _pendingClosedMarkets;
+        }
+
+        uint256 price = _indexPrice(IPerpsV2MarketConsolidated(_market));
+
+        int256 sizeDelta;
+
+        if (_size == 0) {
+            // open
+            _sufficientFund(int256(_copytrade.margin), false);
+            IPerpsV2MarketConsolidated(_market).transferMargin(
+                int256(_copytrade.margin)
+            );
+            uint256 baseSize = (_copytrade.margin *
+                _copytrade.leverage *
+                1e18) / price;
+            sizeDelta = _traderSize > 0 ? int256(baseSize) : -int256(baseSize);
+        } else {
+            sizeDelta =
+                (int256(_abs(_traderSize)) * _size) /
+                int256(_copyPosition.lastTraderSize) -
+                _size;
+        }
+
+        bool isIncrease = false;
+        uint256 acceptablePrice;
+
+        if (
+            (_traderSize > 0 && sizeDelta > 0) ||
+            (_traderSize < 0 && sizeDelta < 0)
+        ) {
+            // increase
+            isIncrease = true;
+            acceptablePrice =
+                (price *
+                    (
+                        _traderSize > 0
+                            ? 1000 + INCREASE_SLIPPAGE
+                            : 1000 - INCREASE_SLIPPAGE
+                    )) /
+                1000;
+
+            if (_size != 0) {
+                uint256 maxSize = (_copytrade.maxMarginPerOI *
+                    _copytrade.leverage *
+                    1e18) / price;
+                if (_abs(_size + sizeDelta) > maxSize) {
+                    if (_traderSize > 0) {
+                        sizeDelta = int256(maxSize) - int256(_abs(_size));
+                    } else {
+                        sizeDelta = int256(_abs(_size)) - int256(maxSize);
+                    }
+                }
+                uint256 requiredMargin = (_abs(_size + sizeDelta) * price) /
+                    _copytrade.leverage;
+                (uint256 remainingMargin, ) = IPerpsV2MarketConsolidated(
+                    _market
+                ).remainingMargin(address(this));
+                if (requiredMargin > remainingMargin) {
+                    _sufficientFund(
+                        int256(requiredMargin - remainingMargin),
+                        false
+                    );
+                    IPerpsV2MarketConsolidated(_market).transferMargin(
+                        int256(requiredMargin - remainingMargin)
+                    );
+                }
+            }
+        } else {
+            if (_abs(sizeDelta) >= _abs(_size)) {
+                // reduce only
+                sizeDelta = -_size;
+                _pendingClosedMarkets.push(_market);
+            }
+            acceptablePrice =
+                (price *
+                    (
+                        _traderSize > 0
+                            ? 1000 - DECREASE_SLIPPAGE
+                            : 1000 + DECREASE_SLIPPAGE
+                    )) /
+                1000;
+        }
+
+        require(sizeDelta != 0, "CopyWallet: Zero size delta");
+
+        IPerpsV2MarketConsolidated(_market)
+            .submitOffchainDelayedOrderWithTracking({
+                sizeDelta: sizeDelta,
                 desiredFillPrice: acceptablePrice,
                 trackingCode: TRACKING_CODE
             });
         _postOrder({
-            _id: uint256(uint160(market)),
-            _source: source,
-            _lastSize: _abs(position.size),
-            _sizeDelta: _abs(position.size),
+            _id: uint256(uint160(_market)),
+            _trader: _trader,
+            _lastTraderSize: _abs(_traderSize),
+            _lastSize: _abs(_size),
+            _sizeDelta: _abs(sizeDelta),
+            _price: price,
+            _isIncrease: isIncrease
+        });
+    }
+
+    function _closeOrder(
+        address _trader,
+        address _market,
+        int256 _traderSize,
+        int256 _size
+    ) internal {
+        uint256 price = _indexPrice(IPerpsV2MarketConsolidated(_market));
+        uint256 acceptablePrice = (price *
+            (
+                _traderSize > 0
+                    ? 1000 - DECREASE_SLIPPAGE
+                    : 1000 + DECREASE_SLIPPAGE
+            )) / 1000;
+
+        _pendingClosedMarkets.push(_market);
+
+        IPerpsV2MarketConsolidated(_market)
+            .submitCloseOffchainDelayedOrderWithTracking({
+                desiredFillPrice: acceptablePrice,
+                trackingCode: TRACKING_CODE
+            });
+
+        _postOrder({
+            _id: uint256(uint160(_market)),
+            _trader: _trader,
+            _lastTraderSize: _abs(_traderSize),
+            _lastSize: _abs(_size),
+            _sizeDelta: _abs(_size),
             _price: price,
             _isIncrease: false
         });
     }
-
-    /* ========== TASKS ========== */
-
-    // TODO task
-    // function _perpValidTask(
-    //     Task memory _task
-    // ) internal view override returns (bool) {
-    //     IPerpsV2MarketConsolidated market = IPerpsV2MarketConsolidated(
-    //         address(uint160(_task.market))
-    //     );
-    //     try
-    //         SYSTEM_STATUS.requireFuturesMarketActive(market.marketKey())
-    //     {} catch {
-    //         return false;
-    //     }
-    //     uint256 price = _indexPrice(market);
-    //     if (_task.command == TaskCommand.STOP_ORDER) {
-    //         if (_task.sizeDelta > 0) {
-    //             // Long: increase position size (buy) once *above* trigger price
-    //             // ex: unwind short position once price is above target price (prevent further loss)
-    //             return price >= _task.triggerPrice;
-    //         } else {
-    //             // Short: decrease position size (sell) once *below* trigger price
-    //             // ex: unwind long position once price is below trigger price (prevent further loss)
-    //             return price <= _task.triggerPrice;
-    //         }
-    //     } else if (_task.command == TaskCommand.LIMIT_ORDER) {
-    //         if (_task.sizeDelta > 0) {
-    //             // Long: increase position size (buy) once *below* trigger price
-    //             // ex: open long position once price is below trigger price
-    //             return price <= _task.triggerPrice;
-    //         } else {
-    //             // Short: decrease position size (sell) once *above* trigger price
-    //             // ex: open short position once price is above trigger price
-    //             return price >= _task.triggerPrice;
-    //         }
-    //     }
-    //     return false;
-    // }
-    // function _perpExecuteTask(
-    //     uint256 _taskId,
-    //     Task memory _task
-    // ) internal override {
-    //     IPerpsV2MarketConsolidated market = IPerpsV2MarketConsolidated(
-    //         address(uint160(_task.market))
-    //     );
-    //     if (_task.command == TaskCommand.STOP_ORDER) {
-    //         IPerpsV2MarketConsolidated.Position memory position = market
-    //             .positions(address(this));
-    //         if (
-    //             position.size == 0 ||
-    //             _isSameSign(position.size, _task.sizeDelta)
-    //         ) {
-    //             EVENTS.emitCancelGelatoTask({
-    //                 taskId: _taskId,
-    //                 gelatoTaskId: _task.gelatoTaskId,
-    //                 reason: "INVALID_SIZE"
-    //             });
-    //             return;
-    //         }
-    //         if (_abs(_task.sizeDelta) > _abs(position.size)) {
-    //             // bound conditional order size delta to current position size
-    //             _task.sizeDelta = -position.size;
-    //         }
-    //     }
-    //     // if margin was locked, free it
-    //     if (_task.collateralDelta > 0) {
-    //         lockedFund -= _abs(_task.collateralDelta);
-    //     }
-    //     if (_task.collateralDelta != 0) {
-    //         if (_task.collateralDelta > 0) {
-    //             _sufficientFund(_task.collateralDelta, true);
-    //         }
-    //         market.transferMargin(_task.collateralDelta);
-    //     }
-    //     _placeOrder({
-    //         _source: _task.source,
-    //         _market: address(uint160(_task.market)),
-    //         _sizeDelta: _task.sizeDelta,
-    //         _acceptablePrice: _task.acceptablePrice
-    //     });
-    // }
 
     /* ========== UTILITIES ========== */
 
@@ -289,7 +302,7 @@ contract CopyWalletSNXv2 is CopyWallet, ICopyWalletSNXv2 {
             // fetch asset price and ensure it is valid
             bool invalid;
             (price, invalid) = _market.assetPrice();
-            if (invalid) revert InvalidPrice();
+            require(!invalid, "Invalid price");
         }
         return price;
     }

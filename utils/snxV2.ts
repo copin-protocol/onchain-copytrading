@@ -607,7 +607,7 @@ export async function placeOrder({
   const ONE = BigNumber.from(10).pow(18);
 
   const sign = isLong === increase ? 1 : -1;
-  // const executorFee = await account.executorUsdFee(
+  // const executorFee = await account.ethToUsd(
   //   ethers.utils.parseEther("1").div(5000)
   // );
   // const protocolFee = PROTOCOL_FEE;
