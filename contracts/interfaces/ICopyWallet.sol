@@ -83,7 +83,7 @@ interface ICopyWallet {
 
     function availableFundD18() external view returns (uint256);
 
-    function executorUsdFee(uint256 _fee) external view returns (uint256);
+    function ethToUsd(uint256 _amount) external view returns (uint256);
 
     // TODO enable again
     // function checker(

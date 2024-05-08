@@ -10,7 +10,6 @@ import {IPositionRouter} from "contracts/interfaces/GMXv1/IPositionRouter.sol";
 import {IVault} from "contracts/interfaces/GMXv1/IVault.sol";
 
 contract CopyWalletGMXv1 is CopyWallet, ICopyWalletGMXv1 {
-
     /* ========== IMMUTABLES ========== */
 
     IRouter internal immutable ROUTER;
@@ -42,10 +41,8 @@ contract CopyWalletGMXv1 is CopyWallet, ICopyWalletGMXv1 {
 
     /* ========== VIEWS ========== */
 
-    function executorUsdFee(
-        uint256 _fee
-    ) public view override returns (uint256) {
-        return _tokenToUsd(_fee, weth);
+    function ethToUsd(uint256 _amount) public view override returns (uint256) {
+        return _tokenToUsd(_amount, weth);
     }
 
     /* ========== PERPS ========== */
@@ -104,11 +101,17 @@ contract CopyWalletGMXv1 is CopyWallet, ICopyWalletGMXv1 {
             revert SourceMismatch();
         }
 
-        (uint256 sizeUsdD30,,uint256 averagePriceD30,,,,,) = VAULT.getPosition(address(this), isLong ? market : address(USD_ASSET), market, isLong);
+        (uint256 sizeUsdD30, , uint256 averagePriceD30, , , , , ) = VAULT
+            .getPosition(
+                address(this),
+                isLong ? market : address(USD_ASSET),
+                market,
+                isLong
+            );
 
         if (sizeUsdD30 == 0 || averagePriceD30 == 0) revert NoOpenPosition();
 
-        uint256 executionFee = POSITION_ROUTER.minExecutionFee() * 120 / 100;
+        uint256 executionFee = (POSITION_ROUTER.minExecutionFee() * 120) / 100;
         if (executionFee > msg.value) revert ExecutionFeeNotEnough();
         uint256 executionFeeUsd = _tokenToUsd(executionFee, weth);
 
@@ -148,8 +151,8 @@ contract CopyWalletGMXv1 is CopyWallet, ICopyWalletGMXv1 {
         _postOrder({
             _id: uint256(uint160(market)),
             _source: source,
-            _lastSize: sizeUsdD30 * 1e18 / averagePriceD30,
-            _sizeDelta: sizeUsdD30 * 1e18 / averagePriceD30,
+            _lastSize: (sizeUsdD30 * 1e18) / averagePriceD30,
+            _sizeDelta: (sizeUsdD30 * 1e18) / averagePriceD30,
             _price: _indexPrice(market),
             _isIncrease: false
         });
@@ -164,12 +167,18 @@ contract CopyWalletGMXv1 is CopyWallet, ICopyWalletGMXv1 {
         uint256 _sizeUsdDelta,
         uint256 _acceptablePrice
     ) internal {
-        (uint256 sizeUsdD30,,uint256 averagePriceD30,,,,,) = VAULT.getPosition(address(this), _isLong ? _market : address(USD_ASSET), _market, _isLong);
+        (uint256 sizeUsdD30, , uint256 averagePriceD30, , , , , ) = VAULT
+            .getPosition(
+                address(this),
+                _isLong ? _market : address(USD_ASSET),
+                _market,
+                _isLong
+            );
 
-        uint256 executionFee = POSITION_ROUTER.minExecutionFee() * 120 / 100;
+        uint256 executionFee = (POSITION_ROUTER.minExecutionFee() * 120) / 100;
         if (executionFee > msg.value) revert ExecutionFeeNotEnough();
         uint256 executionFeeUsd = _tokenToUsd(executionFee, weth);
-        
+
         if (_isIncrease) {
             address[] memory path;
             if (_isLong) {
@@ -177,11 +186,12 @@ contract CopyWalletGMXv1 is CopyWallet, ICopyWalletGMXv1 {
                 path[0] = address(USD_ASSET);
                 path[1] = _market;
             } else {
-                path = new address[](1);    
+                path = new address[](1);
                 path[0] = address(USD_ASSET);
             }
 
-            if (_collateralDelta > 0) USD_ASSET.approve(address(ROUTER), _collateralDelta);
+            if (_collateralDelta > 0)
+                USD_ASSET.approve(address(ROUTER), _collateralDelta);
 
             POSITION_ROUTER.createIncreasePosition{value: executionFee}({
                 _path: path,
@@ -231,8 +241,10 @@ contract CopyWalletGMXv1 is CopyWallet, ICopyWalletGMXv1 {
         _postOrder({
             _id: uint256(uint160(_market)),
             _source: _source,
-            _lastSize: sizeUsdD30 > 0 && averagePriceD30 > 0 ? sizeUsdD30 * 1e18 / averagePriceD30 : 0,
-            _sizeDelta: _sizeUsdDelta * 10 ** 30 / _indexPriceD30(_market),
+            _lastSize: sizeUsdD30 > 0 && averagePriceD30 > 0
+                ? (sizeUsdD30 * 1e18) / averagePriceD30
+                : 0,
+            _sizeDelta: (_sizeUsdDelta * 10 ** 30) / _indexPriceD30(_market),
             _price: _indexPrice(_market),
             _isIncrease: _isIncrease
         });
@@ -314,15 +326,11 @@ contract CopyWalletGMXv1 is CopyWallet, ICopyWalletGMXv1 {
 
     /* ========== UTILITIES ========== */
 
-    function _indexPrice(
-        address _token
-    ) internal view returns (uint256) {
+    function _indexPrice(address _token) internal view returns (uint256) {
         return VAULT.getMaxPrice(_token) / 10 ** 12;
     }
 
-    function _indexPriceD30(
-        address _token
-    ) internal view returns (uint256) {
+    function _indexPriceD30(address _token) internal view returns (uint256) {
         return VAULT.getMaxPrice(_token);
     }
 

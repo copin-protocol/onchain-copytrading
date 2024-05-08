@@ -54,10 +54,10 @@ contract CopyWalletSNXv3 is CopyWallet, ICopyWalletSNXv3, ERC721Holder {
         return _perpClosePosition(_accountId, _market, _acceptablePrice);
     }
 
-    function executorUsdFee(
-        uint256 _fee
-    ) public view override returns (uint256) {
-        return _tokenToUsd(_fee, ETH_MARKET_ID);
+    /* ========== VIEWS ========== */
+
+    function ethToUsd(uint256 _amount) public view override returns (uint256) {
+        return _tokenToUsd(_amount, ETH_MARKET_ID);
     }
 
     function hasPerpPermission(
@@ -155,13 +155,7 @@ contract CopyWalletSNXv3 is CopyWallet, ICopyWalletSNXv3, ERC721Holder {
         }
     }
 
-    function _allocatedAccount(
-        address _source,
-        uint256 _market
-    ) internal view returns (uint128 accountId) {
-        accountId = getAllocatedAccount(_source, _market);
-        if (accountId == 0) revert NoAccountAvailable();
-    }
+    /* ========== PERPS ========== */
 
     function _perpInit() internal override {
         _perpCreateAccount();
@@ -460,6 +454,16 @@ contract CopyWalletSNXv3 is CopyWallet, ICopyWalletSNXv3, ERC721Holder {
         // lock 3 blocks
         if (size == 0 && block.number > order.commitmentBlock + 3) return true;
         return false;
+    }
+
+    /* ========== UTILITIES ========== */
+
+    function _allocatedAccount(
+        address _source,
+        uint256 _market
+    ) internal view returns (uint128 accountId) {
+        accountId = getAllocatedAccount(_source, _market);
+        if (accountId == 0) revert NoAccountAvailable();
     }
 
     function _getMarketId(uint256 _market) internal pure returns (uint128) {

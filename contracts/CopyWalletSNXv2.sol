@@ -40,10 +40,8 @@ contract CopyWalletSNXv2 is CopyWallet, ICopyWalletSNXv2 {
 
     /* ========== VIEWS ========== */
 
-    function executorUsdFee(
-        uint256 _fee
-    ) public view override returns (uint256) {
-        return _tokenToUsd(_fee, _getPerpsV2Market(ETH_MARKET_KEY));
+    function ethToUsd(uint256 _amount) public view override returns (uint256) {
+        return _tokenToUsd(_amount, _getPerpsV2Market(ETH_MARKET_KEY));
     }
 
     /* ========== PERPS ========== */

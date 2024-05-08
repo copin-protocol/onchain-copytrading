@@ -55,9 +55,7 @@ abstract contract CopyWallet is
 
     /* ========== VIEWS ========== */
 
-    function executorUsdFee(
-        uint256 _fee
-    ) public view virtual returns (uint256) {}
+    function ethToUsd(uint256 _amount) public view virtual returns (uint256) {}
 
     function availableFund() public view override returns (uint256) {
         return USD_ASSET.balanceOf(address(this)) - lockedFund;
@@ -128,7 +126,7 @@ abstract contract CopyWallet is
             }
         }
         if (msg.sender == executor) {
-            _chargeExecutorFee(msg.sender, numCommands);
+            _chargeExecutorFee(msg.sender);
         }
     }
 
@@ -263,18 +261,14 @@ abstract contract CopyWallet is
 
     /* ========== FEES ========== */
 
-    function _chargeExecutorFee(
-        address _executor,
-        uint256 multiplier
-    ) internal returns (uint256) {
+    function _chargeExecutorFee(address _executor) internal returns (uint256) {
         uint256 fee;
         if (_executor == address(TASK_CREATOR)) {
             (fee, ) = _getFeeDetails();
         } else {
             fee = CONFIGS.executorFee();
         }
-        fee = fee * multiplier;
-        uint256 feeUsd = executorUsdFee(fee);
+        uint256 feeUsd = ethToUsd(fee);
         address feeReceiver = CONFIGS.feeReceiver();
         if (feeUsd <= availableFund()) {
             /// @dev failed Synthetix asset transfer will revert and not return false if unsuccessful

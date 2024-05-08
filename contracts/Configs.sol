@@ -5,11 +5,10 @@ import {IConfigs} from "./interfaces/IConfigs.sol";
 import {Owned} from "./utils/Owned.sol";
 
 contract Configs is IConfigs, Owned {
-
     /* ========== STATES ========== */
 
-    uint256 public executorFee = 1 ether / 5000;
-    uint256 public protocolFee = 4000;
+    uint256 public executorFee = 1 ether / 1000; // 0.001 ethers
+    uint256 public protocolFee = 4000; // 0.025%
     address public feeReceiver;
 
     /* ========== CONSTRUCTOR ========== */
@@ -21,7 +20,7 @@ contract Configs is IConfigs, Owned {
     /* ========== SETTERS ========== */
 
     function setExecutorFee(uint256 _executorFee) external override onlyOwner {
-        require(_executorFee <= 1 ether / 1000, "Over max fee"); // maximum is 0.001 ethers
+        require(_executorFee <= 1 ether / 200, "Over max fee"); // maximum is 0.005 ethers
         executorFee = _executorFee;
         emit ExecutorFeeSet(_executorFee);
     }
