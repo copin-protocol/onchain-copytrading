@@ -6,7 +6,6 @@ import {CopyWalletProxy} from "./CopyWalletProxy.sol";
 import {Owned} from "./utils/Owned.sol";
 
 contract Factory is IFactory, Owned {
-
     /* ========== STATE ========== */
 
     bool public canUpgrade = true;
@@ -64,19 +63,17 @@ contract Factory is IFactory, Owned {
         }
     }
 
-    function newCopyWallet(
-        address initialExecutor
-    ) external override returns (address payable accountAddress) {
+    function newCopyWallet()
+        external
+        override
+        returns (address payable accountAddress)
+    {
         accountAddress = payable(address(new CopyWalletProxy(address(this))));
         accounts[accountAddress] = true;
         ownerCopyWallets[msg.sender].push(accountAddress);
 
         (bool success, bytes memory data) = accountAddress.call(
-            abi.encodeWithSignature(
-                "init(address,address)",
-                msg.sender,
-                initialExecutor
-            )
+            abi.encodeWithSignature("init(address)", msg.sender)
         );
         if (!success) revert FailedToInitCopyWallet(data);
 
@@ -99,7 +96,9 @@ contract Factory is IFactory, Owned {
     ) external override onlyOwner {
         if (!canUpgrade) revert CannotUpgrade();
         implementation = _implementation;
-        emit CopyWalletImplementationUpgraded({implementation: _implementation});
+        emit CopyWalletImplementationUpgraded({
+            implementation: _implementation
+        });
     }
 
     function removeUpgradability() external override onlyOwner {

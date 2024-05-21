@@ -1,14 +1,7 @@
 import { network } from "hardhat";
-import {
-  GMXv1NetworkConfig,
-  SNXv2NetworkConfig,
-  SNXv3NetworkConfig,
-} from "./types/config";
+import { CopinConfig } from "./types/config";
 
-export const CONFIG = network.config as
-  | SNXv3NetworkConfig
-  | SNXv2NetworkConfig
-  | GMXv1NetworkConfig;
+export const CONFIG = network.config as CopinConfig;
 
 export const PROTOCOL_FEE = 4000;
 

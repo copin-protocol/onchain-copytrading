@@ -37,9 +37,7 @@ interface IFactory {
         address _oldOwner
     ) external;
 
-    function newCopyWallet(
-        address initialExecutor
-    ) external returns (address payable accountAddress);
+    function newCopyWallet() external returns (address payable accountAddress);
 
     /// @dev this *will* impact all existing accounts
     /// @dev future accounts will also point to this new implementation (until

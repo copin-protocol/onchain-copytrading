@@ -1,19 +1,8 @@
 {
   "name": "onchain-copytrading",
   "scripts": {
-    "deploy:snx:baseSepolia": "npx hardhat run --network baseSepolia scripts/SNXv3/deploy.ts",
-    "verify:snx:baseSepolia": "npx hardhat run --network baseSepolia scripts/SNXv3/verify.ts",
-    "deploy:snx:base": "npx hardhat run --network base scripts/SNXv3/deploy.ts",
-    "verify:snx:base": "npx hardhat run --network base scripts/SNXv3/verify.ts",
-    "deploy:snx:opSepolia": "npx hardhat run --network opSepolia scripts/SNXv2/deploy.ts",
-    "verify:snx:opSepolia": "npx hardhat run --network opSepolia scripts/SNXv2/verify.ts",
-    "place:snx:opSepolia": "npx hardhat run --network opSepolia scripts/SNXv2/relayPlaceOrder.ts",
-    "execute:snx:opSepolia": "npx hardhat run --network opSepolia scripts/SNXv2/relayExecuteOrder.ts",
-    "close:snx:opSepolia": "npx hardhat run --network opSepolia scripts/SNXv2/relayCloseOrder.ts",
-    "deploy:snx:op": "npx hardhat run --network op scripts/SNXv2/deploy.ts",
-    "verify:snx:op": "npx hardhat run --network op scripts/SNXv2/verify.ts",
-    "deploy:gmx:arbitrum": "npx hardhat run --network arbitrum scripts/GMXv1/deploy.ts",
-    "verify:gmx:arbitrum": "npx hardhat run --network arbitrum scripts/GMXv1/verify.ts",
+    "deploy:gns:testnet": "npx hardhat run --network arbitrumSepolia scripts/deploy.ts",
+    "verify:gns:mainnet": "npx hardhat run --network arbitrum scripts/verify.ts",
     "compile": "hardhat compile",
     "test": "hardhat test",
     "watch": "hardhat watch"
