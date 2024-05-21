@@ -2,13 +2,13 @@
 pragma solidity 0.8.18;
 
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {IGainsTrading} from "../interfaces/IGainsTrading.sol";
-import {ICopyWallet} from "../interfaces/ICopyWallet.sol";
-import {IFactory} from "../interfaces/IFactory.sol";
-import {IConfigs} from "../interfaces/IConfigs.sol";
-import {IEvents} from "../interfaces/IEvents.sol";
-import {IERC20} from "../interfaces/token/IERC20.sol";
-import {Owned} from "../utils/Owned.sol";
+import {IGainsTrading} from "./interfaces/IGainsTrading.sol";
+import {ICopyWallet} from "./interfaces/ICopyWallet.sol";
+import {IFactory} from "./interfaces/IFactory.sol";
+import {IConfigs} from "./interfaces/IConfigs.sol";
+import {IEvents} from "./interfaces/IEvents.sol";
+import {IERC20} from "./interfaces/token/IERC20.sol";
+import {Owned} from "./utils/Owned.sol";
 
 contract CopyWallet is Owned, ReentrancyGuard, ICopyWallet {
     /* ========== CONSTANTS ========== */
@@ -26,6 +26,10 @@ contract CopyWallet is Owned, ReentrancyGuard, ICopyWallet {
     /* ========== STATES ========== */
 
     uint256 public lockedFund;
+
+    mapping(address => CopyTrade) _copyTrades;
+    mapping(bytes32 => uint32) _keyIndexes;
+    mapping(uint32 => TraderPosition) _traderPositions;
 
     /* ========== CONSTRUCTOR ========== */
 
@@ -56,6 +60,7 @@ contract CopyWallet is Owned, ReentrancyGuard, ICopyWallet {
     function init(address _owner) external {
         require(msg.sender == address(FACTORY), "Unauthorized");
         _setInitialOwnership(_owner);
+        USD_ASSET.approve(address(GAINS_TRADING), 2 ** 256 - 1);
     }
 
     function _setInitialOwnership(address _owner) private {
@@ -119,6 +124,16 @@ contract CopyWallet is Owned, ReentrancyGuard, ICopyWallet {
         EVENTS.emitChargeProtocolFee({receiver: feeReceiver, feeUsd: _feeUsd});
     }
 
+    /* ========== COPY TRADES ========== */
+
+    function setCopyTrade(
+        address _trader,
+        CopyTrade memory copyTrade
+    ) external onlyOwner {
+        _copyTrades[_trader] = copyTrade;
+        EVENTS.emitSetCopyTrade(_trader, copyTrade);
+    }
+
     /* ========== PERPS ========== */
 
     // function _preOrder(
@@ -133,21 +148,96 @@ contract CopyWallet is Owned, ReentrancyGuard, ICopyWallet {
         IGainsTrading.Trade memory trade,
         uint16 _maxSlippageP
     ) external onlyOwner {
-        require(trade.collateralIndex == 3, "Only support USDC");
-        USD_ASSET.approve(address(GAINS_TRADING), trade.collateralAmount);
-        GAINS_TRADING.openTrade(trade, _maxSlippageP, CONFIGS.feeReceiver());
+        require(
+            trade.collateralIndex == 3 || trade.collateralIndex == 1,
+            "Collateral index not support"
+        );
+        CopyTrade memory copyTrade = _copyTrades[trade.user];
+        require(copyTrade.enable, "Not exist or disabled");
+        if (trade.collateralIndex == 1) {
+            trade.collateralAmount =
+                (trade.collateralAmount * 10 ** 6) /
+                10 ** 18;
+            trade.collateralIndex = 3;
+        }
+        require(
+            trade.collateralAmount >= copyTrade.lowestCollateral,
+            "Under the lowest collateral"
+        );
+        require(
+            trade.leverage >= copyTrade.lowestLeverage,
+            "Under the lowest leverage"
+        );
+        trade.collateralAmount = copyTrade.collateral;
+        trade.leverage = copyTrade.leverage;
+
+        if (copyTrade.reverse) {
+            trade.long = !trade.long;
+        }
+
+        if (copyTrade.tpP > 0) {
+            uint64 diff = (trade.openPrice * copyTrade.tpP) /
+                copyTrade.leverage;
+            trade.tp = trade.long
+                ? trade.openPrice + diff
+                : trade.openPrice - diff;
+        } else {
+            trade.tp = 0;
+        }
+        if (copyTrade.slP > 0) {
+            uint64 diff = (trade.openPrice * copyTrade.slP) /
+                copyTrade.leverage;
+            trade.sl = trade.long
+                ? trade.openPrice - diff
+                : trade.openPrice + diff;
+        } else {
+            trade.sl = 0;
+        }
+
+        bytes32 key = keccak256(abi.encodePacked(trade.user, trade.index));
+        IGainsTrading.Counter memory counter = GAINS_TRADING.getCounters(
+            address(this),
+            IGainsTrading.CounterType.TRADE
+        );
+
+        TraderPosition memory traderPosition = TraderPosition({
+            trader: trade.user,
+            index: trade.index,
+            __placeholder: 0
+        });
+
+        trade.user = address(this);
+        trade.index = counter.currentIndex;
+
+        _openTrade(key, traderPosition, trade, _maxSlippageP);
     }
 
-    function closeTradeMarket(uint32 _index) external onlyOwner {
-        _closeTradeMarket(_index);
+    function closeTradeMarket(
+        address _trader,
+        uint32 _traderIndex
+    ) external onlyOwner {
+        bytes32 key = keccak256(abi.encodePacked(_trader, _traderIndex));
+        uint32 index = _keyIndexes[key];
+        TraderPosition memory traderPosition = _traderPositions[index];
+        require(
+            traderPosition.trader == _trader &&
+                traderPosition.index == _traderIndex,
+            "Position not found"
+        );
+        _closeTradeMarket(index);
     }
 
     function _openTrade(
+        bytes32 key,
+        TraderPosition memory traderPosition,
         IGainsTrading.Trade memory trade,
         uint16 _maxSlippageP
     ) internal {
+        _keyIndexes[key] = trade.index;
+        _traderPositions[trade.index] = traderPosition;
         GAINS_TRADING.openTrade(trade, _maxSlippageP, CONFIGS.feeReceiver());
-        uint256 fees = _protocolFee(trade.collateralAmount * trade.leverage);
+        uint256 fees = _protocolFee(trade.collateralAmount * trade.leverage) /
+            500; //  2 / 1000 open + close
         _lockFund(int256(fees), true);
     }
 
@@ -173,24 +263,24 @@ contract CopyWallet is Owned, ReentrancyGuard, ICopyWallet {
 
     /* ========== UTILITIES ========== */
 
-    function _d18ToUsd(uint256 _amount) internal view returns (uint256) {
+    function _d18ToUsd(uint _amount) internal pure returns (uint) {
         /// @dev convert to fund asset decimals
-        return (_amount * 10 ** USD_ASSET.decimals()) / 10 ** 18;
+        return (_amount * 10 ** 6) / 10 ** 18;
     }
 
-    function _usdToD18(uint256 _amount) internal view returns (uint256) {
+    function _usdToD18(uint _amount) internal pure returns (uint) {
         /// @dev convert to fund asset decimals
-        return (_amount * 10 ** 18) / 10 ** USD_ASSET.decimals();
+        return (_amount * 10 ** 18) / 10 ** 6;
     }
 
-    function _abs(int256 x) internal pure returns (uint256 z) {
+    function _abs(int x) internal pure returns (uint z) {
         assembly {
             let mask := sub(0, shr(255, x))
             z := xor(mask, add(mask, x))
         }
     }
 
-    function _isSameSign(int256 x, int256 y) internal pure returns (bool) {
+    function _isSameSign(int x, int y) internal pure returns (bool) {
         assert(x != 0 && y != 0);
         return (x ^ y) >= 0;
     }

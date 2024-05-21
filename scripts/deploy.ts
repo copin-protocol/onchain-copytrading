@@ -31,19 +31,19 @@ async function main() {
   // console.log("Configs deployed to:", configs.address);
   const configs = { address: CONFIG.CONFIGS_ADDRESS };
 
-  // const implementation = await CopyWallet.deploy({
-  //   factory: factory.address,
-  //   events: events.address,
-  //   configs: configs.address,
-  //   usdAsset,
-  //   gainsTrading,
-  //   feeReceiver,
-  // });
-  // await implementation.deployed();
-  // console.log("Copytrade Implementation deployed to:", implementation.address);
-  const implementation = {
-    address: CONFIG.IMPLEMENTATION_ADDRESS,
-  };
+  const implementation = await CopyWallet.deploy({
+    factory: factory.address,
+    events: events.address,
+    configs: configs.address,
+    usdAsset,
+    gainsTrading,
+    feeReceiver,
+  });
+  await implementation.deployed();
+  console.log("Copytrade Implementation deployed to:", implementation.address);
+  // const implementation = {
+  //   address: CONFIG.IMPLEMENTATION_ADDRESS,
+  // };
 
   const tx = await factory
     .connect(wallet as any)

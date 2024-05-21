@@ -49,10 +49,10 @@ const config: HardhatUserConfig = {
       ...{
         USD_ASSET: "0x4cC7EbEeD5EA3adf3978F19833d2E1f3e8980cD6",
         FACTORY_ADDRESS: "0xc463f0e7fA432900b092653f914Fbd8559D7DB10",
-        EVENTS_ADDRESS: "0x5bfC833BC041DCb65D8294C2DD9C817D71aEa9b8",
+        EVENTS_ADDRESS: "0xc711ad2753232bb2e1b48a63B944CE12a78fbBaf",
         CONFIGS_ADDRESS: "0x944c7626b5074F423F4C00aa54b520c4d985578d",
-        IMPLEMENTATION_ADDRESS: "0x262172D64922C9Dda2fd22aADE46B60A2A18BA71",
-        SMART_WALLET_ADDRESS: "",
+        IMPLEMENTATION_ADDRESS: "0x329b3599e51B992879349C0388D29a5B06861B0B",
+        SMART_WALLET_ADDRESS: "0x4c771f04038a485E20e8BA7352356AcE3641529F",
         GAINS_TRADING: "0xd659a15812064C79E189fd950A189b15c75d3186",
       },
     },
@@ -85,9 +85,7 @@ const config: HardhatUserConfig = {
     // Obtain one at https://etherscan.io/
     apiKey: {
       mainnet: process.env.ETHERSCAN_API_KEY!,
-      optimisticEthereum: process.env.OPSCAN_API_KEY!,
-      base: process.env.BASESCAN_API_KEY!,
-      arbitrumOne: process.env.ARBISCAN_API_KEY!,
+      arbitrumSepolia: process.env.ARBISCAN_API_KEY!,
     },
     customChains: [
       // {
@@ -99,35 +97,11 @@ const config: HardhatUserConfig = {
       //   },
       // },
       {
-        network: "arbitrumOne",
-        chainId: 421613,
+        network: "arbitrumSepolia",
+        chainId: 421614,
         urls: {
-          apiURL: "https://api-testnet.arbiscan.io/api",
-          browserURL: "https://testnet.arbiscan.io",
-        },
-      },
-      {
-        network: "base",
-        chainId: 84532,
-        urls: {
-          apiURL: "https://api-sepolia.basescan.org/api",
-          browserURL: "https://sepolia.basescan.org",
-        },
-      },
-      {
-        network: "base",
-        chainId: 8453,
-        urls: {
-          apiURL: "https://api.basescan.org/api",
-          browserURL: "https://basescan.org",
-        },
-      },
-      {
-        network: "optimisticEthereum",
-        chainId: 11155420,
-        urls: {
-          apiURL: "https://api-sepolia-optimism.etherscan.io/api",
-          browserURL: "https://sepolia-optimism.etherscan.io",
+          apiURL: "https://api-sepolia.arbiscan.io/api",
+          browserURL: "https://sepolia.arbiscan.io",
         },
       },
     ],

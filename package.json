@@ -2,7 +2,7 @@
   "name": "onchain-copytrading",
   "scripts": {
     "deploy:gns:testnet": "npx hardhat run --network arbitrumSepolia scripts/deploy.ts",
-    "verify:gns:mainnet": "npx hardhat run --network arbitrum scripts/verify.ts",
+    "verify:gns:testnet": "npx hardhat run --network arbitrumSepolia scripts/verify.ts",
     "compile": "hardhat compile",
     "test": "hardhat test",
     "watch": "hardhat watch"

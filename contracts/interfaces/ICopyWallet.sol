@@ -10,6 +10,26 @@ interface ICopyWallet {
         address gainsTrading;
     }
 
+    struct TraderPosition {
+        address trader;
+        uint32 index;
+        uint64 __placeholder;
+    }
+
+    struct CopyTrade {
+        // slot 1
+        uint120 collateral; // 1e6
+        uint120 lowestCollateral;
+        bool reverse;
+        bool enable;
+        // slot 2
+        uint24 leverage; // 1e3
+        uint24 lowestLeverage; // 1e3
+        uint16 tpP; // 1e1
+        uint16 slP; // 1e1
+        uint176 __placeholder;
+    }
+
     function VERSION() external view returns (bytes32);
 
     function lockedFund() external view returns (uint256);

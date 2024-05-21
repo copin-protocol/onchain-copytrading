@@ -35,4 +35,15 @@ interface IEvents {
         address receiver,
         uint256 feeUsd
     );
+
+    function emitSetCopyTrade(
+        address trader,
+        ICopyWallet.CopyTrade memory copyTrade
+    ) external;
+
+    event SetCopyTrade(
+        address indexed wallet,
+        address trader,
+        ICopyWallet.CopyTrade copyTrade
+    );
 }

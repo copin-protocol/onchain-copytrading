@@ -6,9 +6,7 @@ import { Command, CONFIG } from "../utils/constants";
 import { CopinConfig } from "../utils/types/config";
 // const { formatUnits } = require("ethers/lib/utils");
 
-export const FUND = ethers.utils.parseUnits("1000", 6);
-
-const abiDecoder = ethers.utils.defaultAbiCoder;
+export const MARGIN = ethers.utils.parseUnits("600", 6);
 
 async function main() {
   const [wallet1, wallet2] = await ethers.getSigners();
@@ -20,12 +18,27 @@ async function main() {
 
   const usdAsset = (network.config as CopinConfig).USD_ASSET;
 
-  const fund = new ethers.Contract(usdAsset, mockERC20, wallet2 as any);
-
-  const approvedTx = await fund.approve(copyWallet.address, FUND);
-  console.log("approvedTx", approvedTx);
-
-  const tx = await copyWallet.modifyFund(FUND);
+  const tx = await copyWallet.openTrade(
+    {
+      user: wallet1.address,
+      index: 3,
+      pairIndex: 1,
+      leverage: 20000,
+      long: true,
+      isOpen: true,
+      collateralIndex: 3,
+      tradeType: 0,
+      collateralAmount: MARGIN,
+      openPrice: ethers.utils.parseUnits("3708.30", 10),
+      tp: 0,
+      sl: 0,
+      __placeholder: 0,
+    },
+    ethers.utils.parseUnits("1", 3)
+    // {
+    //   gasLimit: 3000000,
+    // }
+  );
   console.log("tx", tx);
 }
 main();

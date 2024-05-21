@@ -8,6 +8,11 @@ interface IGainsTrading {
         STOP
     }
 
+    enum CounterType {
+        TRADE,
+        PENDING_ORDER
+    }
+
     struct Trade {
         // slot 1
         address user; // 160 bits
@@ -27,6 +32,12 @@ interface IGainsTrading {
         uint192 __placeholder;
     }
 
+    struct Counter {
+        uint32 currentIndex;
+        uint32 openCount;
+        uint192 __placeholder;
+    }
+
     function openTrade(
         Trade calldata trade,
         uint16 _maxSlippageP,
@@ -34,4 +45,9 @@ interface IGainsTrading {
     ) external;
 
     function closeTradeMarket(uint32 _index) external;
+
+    function getCounters(
+        address _trader,
+        CounterType _type
+    ) external view returns (Counter memory);
 }

@@ -57,4 +57,15 @@ contract Events is IEvents {
             feeUsd: feeUsd
         });
     }
+
+    function emitSetCopyTrade(
+        address trader,
+        ICopyWallet.CopyTrade memory copyTrade
+    ) external override onlyCopyWallets {
+        emit SetCopyTrade({
+            wallet: msg.sender,
+            trader: trader,
+            copyTrade: copyTrade
+        });
+    }
 }
