@@ -2,24 +2,29 @@
 pragma solidity 0.8.18;
 
 import {IFactory} from "./interfaces/IFactory.sol";
-import {CopytradeProxy} from "./CopytradeProxy.sol";
+import {CopyWalletProxy} from "./CopyWalletProxy.sol";
 import {Owned} from "./utils/Owned.sol";
 
 contract Factory is IFactory, Owned {
-    bool public canUpgrade = true;
 
+    /* ========== STATE ========== */
+
+    bool public canUpgrade = true;
     address public implementation;
 
     mapping(address accounts => bool exist) public accounts;
+    mapping(address owner => address[] accounts) internal ownerCopyWallets;
 
-    mapping(address owner => address[] accounts) internal ownerCopytrades;
+    /* ========== CONSTRUCTOR ========== */
 
     constructor(address _owner) Owned(_owner) {}
 
-    function getCopytradeOwner(
+    /* ========== GETTERS ========== */
+
+    function getCopyWalletOwner(
         address _account
     ) public view override returns (address) {
-        if (!accounts[_account]) revert CopytradeDoesNotExist();
+        if (!accounts[_account]) revert CopyWalletDoesNotExist();
         (bool success, bytes memory data) = _account.staticcall(
             abi.encodeWithSignature("owner()")
         );
@@ -27,26 +32,28 @@ contract Factory is IFactory, Owned {
         return abi.decode(data, (address));
     }
 
-    function getCopytradesOwnedBy(
+    function getCopyWalletsOwnedBy(
         address _owner
     ) external view override returns (address[] memory) {
-        return ownerCopytrades[_owner];
+        return ownerCopyWallets[_owner];
     }
 
-    function updateCopytradeOwnership(
+    /* ========== MUTATES ========== */
+
+    function updateCopyWalletOwnership(
         address _newOwner,
         address _oldOwner
     ) external override {
-        if (!accounts[msg.sender]) revert CopytradeDoesNotExist();
-        uint256 length = ownerCopytrades[_oldOwner].length;
+        if (!accounts[msg.sender]) revert CopyWalletDoesNotExist();
+        uint256 length = ownerCopyWallets[_oldOwner].length;
 
         for (uint256 i = 0; i < length; ) {
-            if (ownerCopytrades[_oldOwner][i] == msg.sender) {
-                ownerCopytrades[_oldOwner][i] = ownerCopytrades[_oldOwner][
+            if (ownerCopyWallets[_oldOwner][i] == msg.sender) {
+                ownerCopyWallets[_oldOwner][i] = ownerCopyWallets[_oldOwner][
                     length - 1
                 ];
-                ownerCopytrades[_oldOwner].pop();
-                ownerCopytrades[_newOwner].push(msg.sender);
+                ownerCopyWallets[_oldOwner].pop();
+                ownerCopyWallets[_newOwner].push(msg.sender);
 
                 return;
             }
@@ -57,12 +64,12 @@ contract Factory is IFactory, Owned {
         }
     }
 
-    function newCopytrade(
+    function newCopyWallet(
         address initialExecutor
     ) external override returns (address payable accountAddress) {
-        accountAddress = payable(address(new CopytradeProxy(address(this))));
+        accountAddress = payable(address(new CopyWalletProxy(address(this))));
         accounts[accountAddress] = true;
-        ownerCopytrades[msg.sender].push(accountAddress);
+        ownerCopyWallets[msg.sender].push(accountAddress);
 
         (bool success, bytes memory data) = accountAddress.call(
             abi.encodeWithSignature(
@@ -71,26 +78,28 @@ contract Factory is IFactory, Owned {
                 initialExecutor
             )
         );
-        if (!success) revert FailedToInitCopytrade(data);
+        if (!success) revert FailedToInitCopyWallet(data);
 
         (success, data) = accountAddress.call(
             abi.encodeWithSignature("VERSION()")
         );
-        if (!success) revert CopytradeFailedToFetchVersion(data);
+        if (!success) revert CopyWalletFailedToFetchVersion(data);
 
-        emit NewCopytrade({
+        emit NewCopyWallet({
             creator: msg.sender,
             account: accountAddress,
             version: abi.decode(data, (bytes32))
         });
     }
 
-    function upgradeCopytradeImplementation(
+    /* ========== UPGRADE ========== */
+
+    function upgradeCopyWalletImplementation(
         address _implementation
     ) external override onlyOwner {
         if (!canUpgrade) revert CannotUpgrade();
         implementation = _implementation;
-        emit CopytradeImplementationUpgraded({implementation: _implementation});
+        emit CopyWalletImplementationUpgraded({implementation: _implementation});
     }
 
     function removeUpgradability() external override onlyOwner {

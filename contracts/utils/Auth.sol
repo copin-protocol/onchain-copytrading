@@ -2,7 +2,7 @@
 pragma solidity 0.8.18;
 
 /// @author JaredBorders (jaredborders@pm.me)
-/// @dev This contract is intended to be inherited by the Copytrade contract
+/// @dev This contract is intended to be inherited by the CopyWallet contract
 abstract contract Auth {
     address public owner;
 
@@ -21,12 +21,12 @@ abstract contract Auth {
         address indexed newOwner
     );
 
-    event DelegatedCopytradeAdded(
+    event DelegatedCopyWalletAdded(
         address indexed caller,
         address indexed delegate
     );
 
-    event DelegatedCopytradeRemoved(
+    event DelegatedCopyWalletRemoved(
         address indexed caller,
         address indexed delegate
     );
@@ -65,7 +65,7 @@ abstract contract Auth {
 
         delegates[_delegate] = true;
 
-        emit DelegatedCopytradeAdded({caller: msg.sender, delegate: _delegate});
+        emit DelegatedCopyWalletAdded({caller: msg.sender, delegate: _delegate});
     }
 
     /// @dev only owner can remove a delegate (not delegates)
@@ -78,7 +78,7 @@ abstract contract Auth {
 
         delete delegates[_delegate];
 
-        emit DelegatedCopytradeRemoved({
+        emit DelegatedCopyWalletRemoved({
             caller: msg.sender,
             delegate: _delegate
         });

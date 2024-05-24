@@ -6,10 +6,20 @@ import {AutomateTaskCreator} from "./utils/gelato/AutomateTaskCreator.sol";
 import {ModuleData} from "./utils/gelato/Types.sol";
 
 contract TaskCreator is AutomateTaskCreator {
+
+    /* ========== IMMUTABLES ========== */
+
     address public immutable factory;
+
+    /* ========== STATE ========== */
+
     mapping(bytes32 => address) _taskOwners;
 
-    error OnlyCopytrades();
+    /* ========== ERRORS ========== */
+
+    error OnlyCopyWallets();
+
+    /* ========== CONSTRUCTOR ========== */
 
     constructor(
         address _factory,
@@ -18,14 +28,18 @@ contract TaskCreator is AutomateTaskCreator {
         factory = _factory;
     }
 
-    modifier onlyCopytrades() {
+    /* ========== MODIFIERS ========== */
+
+    modifier onlyCopyWallets() {
         if (!IFactory(factory).accounts(msg.sender)) {
-            revert OnlyCopytrades();
+            revert OnlyCopyWallets();
         }
         _;
     }
 
-    function cancelTask(bytes32 _gelatoTaskId) external onlyCopytrades {
+    /* ========== MUTATES ========== */
+
+    function cancelTask(bytes32 _gelatoTaskId) external onlyCopyWallets {
         require(_taskOwners[_gelatoTaskId] == msg.sender, "UNAUTHORIZED");
         _cancelTask(_gelatoTaskId);
     }
@@ -33,7 +47,7 @@ contract TaskCreator is AutomateTaskCreator {
     function createTask(
         bytes memory execData,
         ModuleData memory moduleData
-    ) external onlyCopytrades returns (bytes32 _gelatoTaskId) {
+    ) external onlyCopyWallets returns (bytes32 _gelatoTaskId) {
         _gelatoTaskId = _createTask(
             msg.sender,
             execData,
@@ -42,12 +56,4 @@ contract TaskCreator is AutomateTaskCreator {
         );
         _taskOwners[_gelatoTaskId] = msg.sender;
     }
-
-    // fund executions by depositing to 1Balance
-    // function depositFunds1Balance(
-    //     address token,
-    //     uint256 amount
-    // ) external payable {
-    //     _depositFunds1Balance(amount, token, address(this));
-    // }
 }

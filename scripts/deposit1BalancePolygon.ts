@@ -1,7 +1,7 @@
 import { ethers } from "hardhat";
 import gelato1BalanceAbi from "../utils/abis/gelato1BalanceAbi";
 import { abi as mockERC20 } from "../artifacts/contracts/test/MockERC20.sol/MockERC20.json";
-import { TASK_CREATOR_ADDRESS } from "../utils/constants";
+import { CONFIG } from "../utils/constants";
 
 // ONLY RUN ON GOERLI AND POLYGON!!!
 async function main() {
@@ -21,7 +21,7 @@ async function main() {
   console.log("approvedTx", approvedTx);
 
   const tx = await gelato1Balance.depositToken(
-    TASK_CREATOR_ADDRESS,
+    CONFIG.TASK_CREATOR_ADDRESS,
     USDC,
     amount
   );

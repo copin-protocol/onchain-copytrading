@@ -1,11 +1,11 @@
 import { formatEther, parseEther } from "@ethersproject/units";
 
 import { ethers, network } from "hardhat";
-import { abi as copytradeAbi } from "../artifacts/contracts/CopytradeSNX.sol/CopytradeSNX.json";
-import { Command, SMART_COPYTRADE_ADDRESS } from "../utils/constants";
-import { CopinNetworkConfig } from "../utils/types/config";
-import perpsMarketAbi from "../utils/abis/perpsMarketAbi";
-import { calculateAcceptablePrice } from "../utils/perps";
+import { abi as copyWalletAbi } from "../artifacts/contracts/CopyWalletSNXv3.sol/CopyWalletSNXv3.json";
+import { Command, CONFIG } from "../utils/constants";
+import { SNXv3NetworkConfig } from "../utils/types/config";
+import perpsMarketAbi from "../utils/abis/perpsV3MarketAbi";
+import { calculateAcceptablePrice } from "../utils/snxV3";
 import { getRelaySigner } from "../utils/relay";
 
 const abiDecoder = ethers.utils.defaultAbiCoder;
@@ -16,16 +16,16 @@ async function main() {
   const signer = getRelaySigner();
 
   const demoSource = {
-    address: SMART_COPYTRADE_ADDRESS,
+    address: CONFIG.SMART_WALLET_ADDRESS,
   };
 
-  const copytrade = new ethers.Contract(
-    SMART_COPYTRADE_ADDRESS,
-    copytradeAbi,
+  const copyWallet = new ethers.Contract(
+    CONFIG.SMART_WALLET_ADDRESS,
+    copyWalletAbi,
     signer as any
   );
 
-  const perps = (network.config as CopinNetworkConfig).SNX_PERPS_MARKET;
+  const perps = (network.config as SNXv3NetworkConfig).SNX_PERPS_MARKET;
   const perpsMarket = new ethers.Contract(perps, perpsMarketAbi, signer as any);
 
   const indexPrice = (await perpsMarket.indexPrice(ethMarketId)).sub(
@@ -35,7 +35,7 @@ async function main() {
   const inputs: string[] = [];
 
   // get account allocated for source trader address + market address
-  const accountId = await copytrade.getAllocatedAccount(
+  const accountId = await copyWallet.getAllocatedAccount(
     demoSource.address,
     ethMarketId
   );
@@ -70,7 +70,7 @@ async function main() {
   );
 
   console.log("commands", commands);
-  const tx = await copytrade.execute(commands, inputs);
+  const tx = await copyWallet.execute(commands, inputs);
   console.log("tx", tx);
 }
 main();

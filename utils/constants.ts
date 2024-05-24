@@ -1,14 +1,16 @@
-require("dotenv").config();
+import { network } from "hardhat";
+import {
+  GMXv1NetworkConfig,
+  SNXv2NetworkConfig,
+  SNXv3NetworkConfig,
+} from "./types/config";
+
+export const CONFIG = network.config as
+  | SNXv3NetworkConfig
+  | SNXv2NetworkConfig
+  | GMXv1NetworkConfig;
 
 export const PROTOCOL_FEE = 4000;
-export const SMART_COPYTRADE_ADDRESS = process.env.SMART_COPYTRADE_ADDRESS!;
-export const FACTORY_ADDRESS = process.env.FACTORY_ADDRESS!;
-export const TASK_CREATOR_ADDRESS = process.env.TASK_CREATOR_ADDRESS!;
-export const EVENTS_ADDRESS = process.env.EVENTS_ADDRESS!;
-export const CONFIGS_ADDRESS = process.env.CONFIGS_ADDRESS!;
-export const IMPLEMENTATION_ADDRESS = process.env.IMPLEMENTATION_ADDRESS!;
-export const RELAYER_API_KEY = process.env.RELAYER_API_KEY!;
-export const RELAYER_API_SECRET = process.env.RELAYER_API_SECRET!;
 
 export enum Command {
   OWNER_MODIFY_FUND = 0,
@@ -25,7 +27,7 @@ export enum Command {
   GELETO_CANCEL_TASK = 11,
 }
 
-export const MARKET_IDS = {
+export const SNX_V3_MARKET_IDS = {
   ETH: 100,
   BTC: 200,
 };
