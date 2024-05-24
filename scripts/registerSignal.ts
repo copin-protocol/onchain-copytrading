@@ -16,16 +16,8 @@ async function main() {
     wallet2 as any
   );
 
-  const tx = await copyWallet.setCopyTrade(wallet2.address, {
-    collateral: MARGIN,
-    lowestCollateral: ethers.utils.parseUnits("100", 6),
-    reverse: false,
-    enable: true,
-    leverage: 20000,
-    lowestLeverage: 10000,
-    tpP: 255,
-    slP: 651,
-    __placeholder: 0,
+  const tx = await copyWallet.registerSignal({
+    gasLimit: 3000000,
   });
   console.log("tx", tx);
 }

@@ -30,6 +30,7 @@
     "typescript": "5.2.2"
   },
   "dependencies": {
+    "@chainlink/contracts": "^1.1.0",
     "@gelatonetwork/relay-context": "3.0.0",
     "@gelatonetwork/relay-sdk": "5.0.0",
     "@openzeppelin/contracts": "4.9.5",

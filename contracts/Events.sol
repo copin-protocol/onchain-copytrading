@@ -68,4 +68,15 @@ contract Events is IEvents {
             copyTrade: copyTrade
         });
     }
+
+    function emitRegisterSignal(
+        string memory name,
+        uint256 signalId
+    ) external override onlyCopyWallets {
+        emit RegisterSignal({
+            wallet: msg.sender,
+            name: name,
+            signalId: signalId
+        });
+    }
 }

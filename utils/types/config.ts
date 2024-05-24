@@ -9,4 +9,6 @@ export type CopinConfig = NetworkConfig & {
   IMPLEMENTATION_ADDRESS: string;
   SMART_WALLET_ADDRESS: string;
   GAINS_TRADING: string;
+  LINK: string;
+  AUTOMATION_REGISTRAR: string;
 };

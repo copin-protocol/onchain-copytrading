@@ -46,4 +46,8 @@ interface IEvents {
         address trader,
         ICopyWallet.CopyTrade copyTrade
     );
+
+    function emitRegisterSignal(string memory name, uint256 signalId) external;
+
+    event RegisterSignal(address indexed wallet, string name, uint256 signalId);
 }

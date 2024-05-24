@@ -4,6 +4,9 @@ import { CONFIG } from "../utils/constants";
 
 async function main() {
   const usdAsset = (network.config as CopinConfig).USD_ASSET;
+  const link = (network.config as CopinConfig).LINK;
+  const automationRegistrar = (network.config as CopinConfig)
+    .AUTOMATION_REGISTRAR;
   const gainsTrading = (network.config as CopinConfig).GAINS_TRADING;
 
   const [wallet] = await ethers.getSigners();
@@ -37,6 +40,8 @@ async function main() {
         configs: configs.address,
         usdAsset,
         gainsTrading,
+        link,
+        automationRegistrar,
       },
     ],
   });

@@ -13,6 +13,9 @@ async function main() {
   const factory = new ethers.Contract(CONFIG.FACTORY_ADDRESS, factoryAbi);
 
   const usdAsset = (network.config as CopinConfig).USD_ASSET;
+  const link = (network.config as CopinConfig).LINK;
+  const automationRegistrar = (network.config as CopinConfig)
+    .AUTOMATION_REGISTRAR;
   const gainsTrading = (network.config as CopinConfig).GAINS_TRADING;
 
   const CopyWallet = await ethers.getContractFactory("CopyWallet");
@@ -37,7 +40,8 @@ async function main() {
     configs: configs.address,
     usdAsset,
     gainsTrading,
-    feeReceiver,
+    link,
+    automationRegistrar,
   });
   await implementation.deployed();
   console.log("Copytrade Implementation deployed to:", implementation.address);

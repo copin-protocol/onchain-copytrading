@@ -8,6 +8,8 @@ interface ICopyWallet {
         address configs;
         address usdAsset;
         address gainsTrading;
+        address link;
+        address automationRegistrar;
     }
 
     struct TraderPosition {
