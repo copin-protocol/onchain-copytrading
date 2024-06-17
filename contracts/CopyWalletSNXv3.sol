@@ -422,9 +422,8 @@ contract CopyWalletSNXv3 is CopyWallet, ICopyWalletSNXv3, ERC721Holder {
         _postOrder({
             _id: uint256(_accountId),
             _source: _source,
-            _lastSize: _abs(lastSize),
-            _sizeDelta: _abs(_sizeDelta),
-            _price: price,
+            _lastSizeUsd: (_abs(lastSize) * price) / 10 ** 18,
+            _sizeDeltaUsd: (_abs(_sizeDelta) * price) / 10 ** 18,
             _isIncrease: isIncrease
         });
     }

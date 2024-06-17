@@ -3,12 +3,14 @@ import {
   GMXv1NetworkConfig,
   SNXv2NetworkConfig,
   SNXv3NetworkConfig,
+  GNSv8NetworkConfig,
 } from "./types/config";
 
 export const CONFIG = network.config as
   | SNXv3NetworkConfig
   | SNXv2NetworkConfig
-  | GMXv1NetworkConfig;
+  | GMXv1NetworkConfig
+  | GNSv8NetworkConfig;
 
 export const PROTOCOL_FEE = 4000;
 

@@ -39,7 +39,7 @@ const config: HardhatUserConfig = {
         process.env.PRIVATE_KEY_3!,
       ],
     },
-    arbitrum: {
+    gmxV1Mainnet: {
       url: process.env.ARB_NODE_URL,
       accounts: [
         process.env.PRIVATE_KEY_1!,
@@ -64,7 +64,30 @@ const config: HardhatUserConfig = {
         WETH: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
       },
     },
-    opSepolia: {
+    gnsV8Testnet: {
+      url: process.env.ARB_SEPOLIA_NODE_URL,
+      accounts: [
+        process.env.PRIVATE_KEY_1!,
+        process.env.PRIVATE_KEY_2!,
+        process.env.PRIVATE_KEY_3!,
+      ],
+      ...{
+        RELAYER_API_KEY: process.env.RELAYER_API_KEY!,
+        RELAYER_API_SECRET: process.env.RELAYER_API_SECRET!,
+        USD_ASSET: "0x4cC7EbEeD5EA3adf3978F19833d2E1f3e8980cD6",
+        AUTOMATE: "0x2A6C106ae13B558BB9E2Ec64Bd2f1f7BEFF3A5E0",
+        EXECUTOR: "0x949408171c4BE8C7017Ed4331B6c927Cbfe332cD",
+        FACTORY_ADDRESS: "0x1e879694C79D68FCf48D90d09c2FeEb692AF2087",
+        EVENTS_ADDRESS: "0xef68cEE62bc85650Ee96dbBaC7653B1BA103ADc6",
+        CONFIGS_ADDRESS: "0xF062080EEA527b283D8cA4F256fE54305439a515",
+        TASK_CREATOR_ADDRESS: "0x32830388B4013e78F14429B3e9772A26A0A43BF8",
+        IMPLEMENTATION_ADDRESS: "0x2A0c5B8B52E55f2F2942367Ed7AacB0320640866",
+        SMART_WALLET_ADDRESS: "0xAA43BbA5f8ba9C90f43bB831130a7b8a8AA026Ef",
+        GAINS_TRADING: "0xd659a15812064C79E189fd950A189b15c75d3186",
+        PYTH: "0x4374e5a8b9C22271E9EB878A2AA31DE97DF15DAF",
+      },
+    },
+    snxV2Testnet: {
       url: process.env.OP_SEPOLIA_NODE_URL,
       accounts: [
         process.env.PRIVATE_KEY_1!,
@@ -91,7 +114,7 @@ const config: HardhatUserConfig = {
       },
       // gasPrice: 60,
     },
-    op: {
+    snxV2Mainnet: {
       url: process.env.OP_NODE_URL,
       accounts: [
         process.env.PRIVATE_KEY_1!,
@@ -118,7 +141,7 @@ const config: HardhatUserConfig = {
         SNX_SYSTEM_STATUS: "0xE8c41bE1A167314ABAF2423b72Bf8da826943FFD",
       },
     },
-    baseSepolia: {
+    snxV3Testnet: {
       url: process.env.BASE_SEPOLIA_NODE_URL,
       accounts: [
         process.env.PRIVATE_KEY_1!,
@@ -143,7 +166,7 @@ const config: HardhatUserConfig = {
         SNX_SUSD: "0x682f0d17feDC62b2a0B91f8992243Bf44cAfeaaE",
       },
     },
-    base: {
+    snxV3Mainnet: {
       url: process.env.BASE_NODE_URL,
       accounts: [
         process.env.PRIVATE_KEY_1!,
@@ -195,10 +218,10 @@ const config: HardhatUserConfig = {
       // },
       {
         network: "arbitrumOne",
-        chainId: 421613,
+        chainId: 421614,
         urls: {
-          apiURL: "https://api-testnet.arbiscan.io/api",
-          browserURL: "https://testnet.arbiscan.io",
+          apiURL: "https://api-sepolia.arbiscan.io/api",
+          browserURL: "https://sepolia.arbiscan.io",
         },
       },
       {

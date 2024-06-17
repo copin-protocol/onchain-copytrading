@@ -33,10 +33,9 @@ interface ICopyWallet {
 
     struct Position {
         address source;
-        uint256 lastSize;
-        uint256 lastSizeDelta;
-        uint256 lastPrice;
-        uint256 lastFees;
+        uint256 lastSizeUsd;
+        uint256 lastSizeDeltaUsd;
+        uint256 lastFeeUsd;
     }
 
     struct Task {
@@ -68,6 +67,8 @@ interface ICopyWallet {
     error NoTaskFound();
 
     error SourceMismatch();
+
+    error PositionExist();
 
     error CannotExecuteTask(uint256 taskId, address executor);
 

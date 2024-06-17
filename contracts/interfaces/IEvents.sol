@@ -12,7 +12,7 @@ interface IEvents {
 
     event Deposit(
         address indexed user,
-        address indexed account,
+        address indexed copyWallet,
         uint256 amount
     );
 
@@ -20,7 +20,7 @@ interface IEvents {
 
     event Withdraw(
         address indexed user,
-        address indexed account,
+        address indexed copyWallet,
         uint256 amount
     );
 
@@ -28,7 +28,7 @@ interface IEvents {
 
     event EthWithdraw(
         address indexed user,
-        address indexed account,
+        address indexed copyWallet,
         uint256 amount
     );
 
@@ -49,16 +49,14 @@ interface IEvents {
 
     function emitChargeProtocolFee(
         address receiver,
-        uint256 sizeDelta,
-        uint256 price,
+        uint256 sizeUsd,
         uint256 feeUsd
     ) external;
 
     event ChargeProtocolFee(
         address indexed receiver,
         address indexed copyWallet,
-        uint256 sizeDelta,
-        uint256 price,
+        uint256 sizeUsd,
         uint256 feeUsd
     );
 

@@ -85,9 +85,8 @@ contract CopyWalletSNXv2 is CopyWallet, ICopyWalletSNXv2 {
         _postOrder({
             _id: uint256(uint160(_market)),
             _source: _source,
-            _lastSize: _abs(position.size),
-            _sizeDelta: _abs(_sizeDelta),
-            _price: price,
+            _lastSizeUsd: (_abs(position.size) * price) / 10 ** 18,
+            _sizeDeltaUsd: (_abs(_sizeDelta) * price) / 10 ** 18,
             _isIncrease: isIncrease
         });
     }
@@ -174,9 +173,8 @@ contract CopyWalletSNXv2 is CopyWallet, ICopyWalletSNXv2 {
         _postOrder({
             _id: uint256(uint160(market)),
             _source: source,
-            _lastSize: _abs(position.size),
-            _sizeDelta: _abs(position.size),
-            _price: price,
+            _lastSizeUsd: (_abs(position.size) * price) / 10 ** 18,
+            _sizeDeltaUsd: (_abs(position.size) * price) / 10 ** 18,
             _isIncrease: false
         });
     }

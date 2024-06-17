@@ -5,7 +5,6 @@ import {ICopyWallet, IEvents} from "./interfaces/IEvents.sol";
 import {IFactory} from "./interfaces/IFactory.sol";
 
 contract Events is IEvents {
-
     /* ========== STATE ========== */
 
     address public immutable factory;
@@ -19,7 +18,7 @@ contract Events is IEvents {
         _;
     }
 
-     /* ========== CONSTRUCTOR ========== */
+    /* ========== CONSTRUCTOR ========== */
 
     constructor(address _factory) {
         factory = _factory;
@@ -31,21 +30,21 @@ contract Events is IEvents {
         address user,
         uint256 amount
     ) external override onlyCopyWallets {
-        emit Deposit({user: user, account: msg.sender, amount: amount});
+        emit Deposit({user: user, copyWallet: msg.sender, amount: amount});
     }
 
     function emitWithdraw(
         address user,
         uint256 amount
     ) external override onlyCopyWallets {
-        emit Withdraw({user: user, account: msg.sender, amount: amount});
+        emit Withdraw({user: user, copyWallet: msg.sender, amount: amount});
     }
 
     function emitEthWithdraw(
         address user,
         uint256 amount
     ) external override onlyCopyWallets {
-        emit EthWithdraw({user: user, account: msg.sender, amount: amount});
+        emit EthWithdraw({user: user, copyWallet: msg.sender, amount: amount});
     }
 
     function emitChargeExecutorFee(
@@ -65,15 +64,13 @@ contract Events is IEvents {
 
     function emitChargeProtocolFee(
         address receiver,
-        uint256 sizeDelta,
-        uint256 price,
+        uint256 sizeUsd,
         uint256 feeUsd
     ) external override onlyCopyWallets {
         emit ChargeProtocolFee({
             receiver: receiver,
             copyWallet: msg.sender,
-            sizeDelta: sizeDelta,
-            price: price,
+            sizeUsd: sizeUsd,
             feeUsd: feeUsd
         });
     }

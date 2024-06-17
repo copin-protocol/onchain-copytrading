@@ -34,3 +34,8 @@ export type GMXv1NetworkConfig = CopinConfig & {
   VAULT: string;
   WETH: string;
 };
+
+export type GNSv8NetworkConfig = CopinConfig & {
+  GAINS_TRADING: string;
+  PYTH: string;
+};

@@ -286,17 +286,12 @@ abstract contract CopyWallet is
         return fee;
     }
 
-    function _chargeProtocolFee(
-        uint256 _sizeDelta,
-        uint256 _price,
-        uint256 _feeUsd
-    ) internal {
+    function _chargeProtocolFee(uint256 _sizeUsd, uint256 _feeUsd) internal {
         address feeReceiver = CONFIGS.feeReceiver();
         USD_ASSET.transfer(feeReceiver, _feeUsd);
         EVENTS.emitChargeProtocolFee({
             receiver: feeReceiver,
-            sizeDelta: _sizeDelta,
-            price: _price,
+            sizeUsd: _sizeUsd,
             feeUsd: _feeUsd
         });
     }
@@ -314,40 +309,34 @@ abstract contract CopyWallet is
     function _postOrder(
         uint256 _id,
         address _source,
-        uint256 _lastSize,
-        uint256 _sizeDelta,
-        uint256 _price,
+        uint256 _lastSizeUsd,
+        uint256 _sizeDeltaUsd,
         bool _isIncrease
     ) internal {
         Position memory position = _positions[_id];
-        uint256 delta = _lastSize > position.lastSize
-            ? _lastSize - position.lastSize
+        uint256 deltaUsd = _lastSizeUsd > position.lastSizeUsd
+            ? _lastSizeUsd - position.lastSizeUsd
             : 0;
 
-        if (delta > 0) {
-            if (delta > position.lastSizeDelta) delta = position.lastSizeDelta;
-            uint256 chargeFees = _protocolFee(
-                (delta * position.lastPrice * 2) / 10 ** 18
-            );
-            if (chargeFees > position.lastFees) chargeFees = position.lastFees;
-            lockedFund -= _d18ToUsd(position.lastFees);
-            _chargeProtocolFee(
-                delta,
-                position.lastPrice,
-                _d18ToUsd(chargeFees)
-            );
+        if (deltaUsd > 0) {
+            if (deltaUsd > position.lastSizeDeltaUsd)
+                deltaUsd = position.lastSizeDeltaUsd;
+            uint256 chargedFeeUsd = _protocolFee(deltaUsd * 2);
+            if (chargedFeeUsd > position.lastFeeUsd)
+                chargedFeeUsd = position.lastFeeUsd;
+            lockedFund -= position.lastFeeUsd;
+            _chargeProtocolFee(deltaUsd, chargedFeeUsd);
         }
-        uint256 fees = 0;
+        uint256 feeUsd = 0;
         if (_isIncrease) {
-            fees = _protocolFee((_sizeDelta * _price * 2) / 10 ** 18);
-            _lockFund(int256(fees), false);
+            feeUsd = _protocolFee(_sizeDeltaUsd * 2);
+            _lockFund(int256(feeUsd), true);
         }
         _positions[_id] = Position({
             source: _source,
-            lastSize: _lastSize,
-            lastSizeDelta: _sizeDelta,
-            lastPrice: _price,
-            lastFees: fees
+            lastSizeUsd: _lastSizeUsd,
+            lastSizeDeltaUsd: _sizeDeltaUsd,
+            lastFeeUsd: feeUsd
         });
     }
 

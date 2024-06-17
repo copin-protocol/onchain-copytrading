@@ -151,9 +151,8 @@ contract CopyWalletGMXv1 is CopyWallet, ICopyWalletGMXv1 {
         _postOrder({
             _id: uint256(uint160(market)),
             _source: source,
-            _lastSize: (sizeUsdD30 * 1e18) / averagePriceD30,
-            _sizeDelta: (sizeUsdD30 * 1e18) / averagePriceD30,
-            _price: _indexPrice(market),
+            _lastSizeUsd: sizeUsdD30 / 10 ** 24,
+            _sizeDeltaUsd: sizeUsdD30 / 10 ** 24,
             _isIncrease: false
         });
     }
@@ -241,11 +240,8 @@ contract CopyWalletGMXv1 is CopyWallet, ICopyWalletGMXv1 {
         _postOrder({
             _id: uint256(uint160(_market)),
             _source: _source,
-            _lastSize: sizeUsdD30 > 0 && averagePriceD30 > 0
-                ? (sizeUsdD30 * 1e18) / averagePriceD30
-                : 0,
-            _sizeDelta: (_sizeUsdDelta * 10 ** 30) / _indexPriceD30(_market),
-            _price: _indexPrice(_market),
+            _lastSizeUsd: sizeUsdD30 > 0 ? sizeUsdD30 / 10 ** 24 : 0,
+            _sizeDeltaUsd: _sizeUsdDelta / 10 ** 12,
             _isIncrease: _isIncrease
         });
     }

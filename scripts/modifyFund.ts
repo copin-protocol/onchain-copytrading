@@ -6,7 +6,7 @@ import { Command, CONFIG } from "../utils/constants";
 import { CopinConfig, SNXv3NetworkConfig } from "../utils/types/config";
 // const { formatUnits } = require("ethers/lib/utils");
 
-export const FUND = ethers.utils.parseUnits("200", 6);
+export const FUND = ethers.utils.parseUnits("500", 6);
 
 const abiDecoder = ethers.utils.defaultAbiCoder;
 
